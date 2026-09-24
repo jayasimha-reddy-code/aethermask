@@ -1,0 +1,6 @@
+base_id,installation_name,theater,runway_length_m,personnel_assigned,clearance_required
+BASE-01,Camp Ridgeway,INDOPACOM,4000,3514,TS/SCI
+BASE-02,Fort Aldergate,EUCOM,3600,916,CONFIDENTIAL
+BASE-03,Base Nordhavn,INDOPACOM,2750,690,SECRET
+BASE-04,Airbase Kestrel,EUCOM,2400,2889,TS/SCI
+BASE-05,Camp Lindholm,INDOPACOM,3050,3209,TS/SCI

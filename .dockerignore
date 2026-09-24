@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/*.pyc
+.git
+vault_out/*
+workspace/*
+tests/
+samples/*.csv
+samples/*.parquet
+samples/*.xlsx

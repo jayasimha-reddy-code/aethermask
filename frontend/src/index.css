@@ -1,0 +1,193 @@
+/* ==========================================================================
+   AetherMask (CipherShift) :: Data Studio theme
+   Tailwind CSS v4 - CSS-first configuration (no tailwind.config.js)
+   ==========================================================================
+
+   AIR-GAP NOTE
+   ------------
+   There is no `@import url(...)` to Google Fonts or any other origin in this
+   file, and there never may be. Typography resolves against the operating
+   system font stack only. Every colour and hairline below is self-contained
+   CSS that ships inside the offline bundle.
+   ========================================================================== */
+
+@import "tailwindcss";
+
+/* Class-based dark mode. Tailwind v4 requires the variant to be declared
+   explicitly; the app sets `.dark` on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* --------------------------------------------------------------------------
+   Design tokens.
+   Neutral ramp: Ink / cold slate for air-gapped forensic operations.
+   Accent: Calm precision teal (#2dd4bf), reaching >= 4.5:1 contrast.
+   Chrome is kept quiet; depth comes from surface steps and hairlines.
+   -------------------------------------------------------------------------- */
+@theme {
+  /* Structural surfaces - deep, low-glare slate */
+  --color-abyss-950: #080a0f;
+  --color-abyss-900: #0c0f17;
+  --color-abyss-850: #10141f;
+  --color-abyss-800: #161b29;
+  --color-abyss-750: #1c2233;
+  --color-abyss-700: #242c40;
+  --color-abyss-600: #2f3952;
+  --color-abyss-500: #424f6e;
+
+  /* Signal - sanitized / verified accent */
+  --color-signal-400: #2dd4bf;
+  --color-signal-500: #14b8a6;
+  --color-signal-600: #0d9488;
+  --color-signal-700: #0f766e;
+
+  /* Classified - confidential / source marker */
+  --color-classified-400: #f87171;
+  --color-classified-500: #ef4444;
+  --color-classified-600: #dc2626;
+  --color-classified-700: #b91c1c;
+
+  /* Vault - cryptographic key & mapping operations */
+  --color-vault-400: #a5b4fc;
+  --color-vault-500: #818cf8;
+  --color-vault-600: #6366f1;
+  --color-vault-700: #4f46e5;
+
+  /* Caution - advisory warnings */
+  --color-caution-400: #fbbf24;
+  --color-caution-500: #f59e0b;
+  --color-caution-600: #d97706;
+
+  /* Typography - OS stack only, zero network fetches */
+  --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, "Cascadia Mono",
+    "Roboto Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Motion timing: cubic-bezier(0.22, 1, 0.36, 1) */
+  --ease-emphasized: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Elevation tuned for dark surfaces: hairlines + subtle ambient occlusion */
+  --shadow-panel: 0 1px 0 0 rgb(255 255 255 / 0.05) inset,
+    0 12px 32px -16px rgb(0 0 0 / 0.85);
+}
+
+/* --------------------------------------------------------------------------
+   Base layer
+   -------------------------------------------------------------------------- */
+@layer base {
+  * {
+    border-color: var(--color-abyss-700);
+  }
+
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-abyss-950);
+    color: #eef0f5;
+    font-family: var(--font-display);
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Visible, high-contrast keyboard focus everywhere (WCAG 2.4.7). */
+  :focus-visible {
+    outline: 2px solid var(--color-signal-400);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Native form controls inherit the dark theme. */
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  ::placeholder {
+    color: #64748b;
+  }
+
+  /* Scrollbars - styled locally, quiet and unobtrusive */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-abyss-600) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-abyss-600);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-abyss-500);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Component utilities
+   -------------------------------------------------------------------------- */
+@layer components {
+  .panel {
+    background-color: var(--color-abyss-900);
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 12px;
+    box-shadow: var(--shadow-panel);
+  }
+
+  .hairline {
+    background-color: rgb(255 255 255 / 0.08);
+    height: 1px;
+    width: 100%;
+  }
+
+  /* Diagonal hatch marking a confidential surface. Quiet 4% opacity. */
+  .hatch-classified {
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgb(239 68 68 / 0.04) 0 8px,
+      transparent 8px 16px
+    );
+  }
+
+  .hatch-signal {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgb(45 212 191 / 0.04) 0 8px,
+      transparent 8px 16px
+    );
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion (WCAG 2.3.3)
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

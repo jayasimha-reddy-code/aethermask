@@ -1,0 +1,158 @@
+# ===========================================================================
+#  AetherMask (CipherShift) :: strict air-gap deployment
+# ===========================================================================
+#  network_mode: "none" gives the container ONLY a loopback interface. It has
+#  no default route, no DNS, and no reachable peers. Data exfiltration is
+#  impossible at the kernel network-namespace level, not merely by policy.
+#
+#  Consequence of "none": Docker cannot publish ports, so the UI is reached
+#  through the host-mounted socket directory or by `docker exec`. If an
+#  operator workstation must reach the UI over TCP, use the `bridge-isolated`
+#  profile below instead, which keeps an `internal: true` network (no NAT to
+#  the outside world) while still allowing a published local port.
+#
+#  Build (on a connected staging host, then export with `docker save`):
+#      docker compose -f docker-compose.offline.yml build
+#      docker save aethermask:1.0.0 | gzip > aethermask-1.0.0.tar.gz
+#
+#  Run (on the air-gapped host, after `docker load`):
+#      docker compose -f docker-compose.offline.yml up -d aethermask
+# ===========================================================================
+
+services:
+
+  # -------------------------------------------------------------------
+  #  PRIMARY: absolute air-gap. No network interfaces except loopback.
+  # -------------------------------------------------------------------
+  aethermask:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: runtime
+    image: aethermask:1.0.0
+    container_name: aethermask-airgapped
+
+    # >>> The hard air-gap guarantee. <<<
+    network_mode: "none"
+
+    restart: unless-stopped
+    read_only: true
+    user: "10001:10001"
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    environment:
+      AETHERMASK_HOST: "127.0.0.1"
+      AETHERMASK_PORT: "8000"
+      AETHERMASK_BLOCK_EGRESS: "1"
+      AETHERMASK_ALLOW_LOCAL_PG: "0"
+      AETHERMASK_LOG_LEVEL: "INFO"
+      AETHERMASK_MAX_UPLOAD_MB: "4096"
+      AETHERMASK_ARGON2_MEMORY_KIB: "262144"
+      AETHERMASK_ARGON2_TIME: "4"
+      AETHERMASK_ARGON2_PARALLELISM: "2"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      NO_PROXY: "*"
+
+    volumes:
+      # Operator working directory: drop confidential inputs here, collect
+      # sanitized artifacts and .ciphermap vaults from ./vault_out.
+      - ./workspace:/app/workspace:rw
+      - ./vault_out:/app/vault_out:rw
+      # read_only rootfs needs writable scratch:
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 2147483648   # 2 GiB for large in-memory ingestion
+
+    tmpfs:
+      - /run:size=16m
+
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 2G
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=4).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # -------------------------------------------------------------------
+  #  ALTERNATE: isolated bridge. Use ONLY when an operator workstation
+  #  needs browser access over TCP. `internal: true` means the network
+  #  has NO gateway to the host's uplink - still no route to the Internet.
+  #  Activate with:  docker compose -f docker-compose.offline.yml --profile lan up -d
+  # -------------------------------------------------------------------
+  aethermask-lan:
+    profiles: ["lan"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: runtime
+    image: aethermask:1.0.0
+    container_name: aethermask-isolated
+    restart: unless-stopped
+    read_only: true
+    user: "10001:10001"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - airgap_internal
+    ports:
+      # Bound to the host loopback ONLY - not reachable from the LAN.
+      - "127.0.0.1:8000:8000"
+    environment:
+      AETHERMASK_HOST: "0.0.0.0"
+      AETHERMASK_PORT: "8000"
+      AETHERMASK_BLOCK_EGRESS: "1"
+      AETHERMASK_ALLOW_LOCAL_PG: "1"
+      AETHERMASK_ARGON2_MEMORY_KIB: "262144"
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      NO_PROXY: "*"
+    volumes:
+      - ./workspace:/app/workspace:rw
+      - ./vault_out:/app/vault_out:rw
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 2147483648
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+    healthcheck:
+      test: ["CMD", "python3", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health',timeout=4).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+networks:
+  # internal: true  =>  Docker creates NO gateway/NAT rule for this bridge.
+  # Containers can talk to each other; nothing can reach outside the host.
+  airgap_internal:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.31.253.0/24
