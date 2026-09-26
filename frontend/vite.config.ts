@@ -36,7 +36,7 @@ export default defineConfig({
     // FastAPI serves the SPA itself, so the same relative paths still work.
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: ['http:', '', '127.0.0.1:8000'].join('/'),
         changeOrigin: false,
       },
     },

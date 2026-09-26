@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 /**
  * AetherMask (CipherShift) :: Attestation drawer
  *
- * Surfaces `/api/v1/attestation` — the machine-checkable claim that this
+ * Surfaces `/api/v1/attestation`: the machine-checkable claim that this
  * deployment made zero external calls. Also reports the live browser-side
  * egress ledger recorded by `useEgressWatch`, so the operator sees BOTH the
  * server's self-report and an independent client-side observation.

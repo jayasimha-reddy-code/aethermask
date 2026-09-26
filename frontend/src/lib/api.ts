@@ -25,7 +25,7 @@ import type {
 const API = '/api/v1';
 
 /** Hard guard: refuse to issue any request that is not same-origin relative. */
-function assertRelative(path: string): string {
+export function assertRelative(path: string): string {
   if (/^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith('//')) {
     throw new Error(
       `AetherMask air-gap violation: refusing non-relative request to "${path}"`,
@@ -61,16 +61,19 @@ async function explain(res: Response): Promise<string> {
       }
       if (parsed.detail) return JSON.stringify(parsed.detail);
     } catch {
-      return body.slice(0, 400);
+      const clean = body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      return clean.length > 200 ? `${clean.slice(0, 200)}...` : clean || `${res.status} ${res.statusText}`;
     }
   }
   return `${res.status} ${res.statusText}`;
 }
 
+const SAME_ORIGIN = ('same-origin' as const);
+
 async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(assertRelative(`${API}${path}`), {
     method: 'GET',
-    credentials: 'same-origin',
+    credentials: SAME_ORIGIN,
     cache: 'no-store',
     signal,
   });
@@ -86,7 +89,7 @@ async function postForm<T>(
   const res = await fetch(assertRelative(`${API}${path}`), {
     method: 'POST',
     body: form,
-    credentials: 'same-origin',
+    credentials: SAME_ORIGIN,
     cache: 'no-store',
     signal,
   });
@@ -168,7 +171,7 @@ export function restore(args: RestoreArgs, signal?: AbortSignal) {
 /**
  * Independent isomorphism audit of an (original, sanitized, vault) triple.
  *
- * NOTE: `/api/v1/verify` requires THREE files — the confidential original, the
+ * NOTE: `/api/v1/verify` requires THREE files: the confidential original, the
  * sanitized artifact, and the `.ciphermap`. It recomputes aggregates on both
  * sides rather than trusting the masking run's own fidelity report, which is
  * what makes it an *independent* audit.

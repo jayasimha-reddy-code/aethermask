@@ -58,6 +58,64 @@ function record(url: string): boolean {
   return external;
 }
 
+let nativeFetch: typeof window.fetch | null = null;
+let nativeOpen: typeof XMLHttpRequest.prototype.open | null = null;
+
+function patchedFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const url =
+    typeof input === 'string'
+      ? input
+      : input instanceof URL
+        ? input.href
+        : input.url;
+  if (record(url)) {
+    return Promise.reject(
+      new Error(
+        `AetherMask air-gap enforcement: blocked external request to ${url}`,
+      ),
+    );
+  }
+  return nativeFetch
+    ? nativeFetch(input as RequestInfo, init)
+    : window.fetch(input, init);
+}
+
+function patchedOpen(
+  this: XMLHttpRequest,
+  method: string,
+  url: string | URL,
+  ...rest: unknown[]
+) {
+  const href = typeof url === 'string' ? url : url.href;
+  if (record(href)) {
+    throw new Error(
+      `AetherMask air-gap enforcement: blocked external XHR to ${href}`,
+    );
+  }
+  if (!nativeOpen) return;
+  return (
+    nativeOpen as (
+      this: XMLHttpRequest,
+      m: string,
+      u: string | URL,
+      ...r: unknown[]
+    ) => void
+  ).call(this, method, url, ...rest);
+}
+
+function observeResourceEntries(list: PerformanceObserverEntryList): void {
+  for (const entry of list.getEntries()) {
+    const name = entry.name;
+    if (isExternal(name) && !ledger.external.includes(name)) {
+      ledger.external.push(name);
+      notify();
+    }
+  }
+}
+
 /** Install the patches exactly once per page load. */
 let installed = false;
 
@@ -65,63 +123,17 @@ function install(): void {
   if (installed || typeof window === 'undefined') return;
   installed = true;
 
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = function patchedFetch(
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ): Promise<Response> {
-    const url =
-      typeof input === 'string'
-        ? input
-        : input instanceof URL
-          ? input.href
-          : input.url;
-    if (record(url)) {
-      return Promise.reject(
-        new Error(
-          `AetherMask air-gap enforcement: blocked external request to ${url}`,
-        ),
-      );
-    }
-    return nativeFetch(input as RequestInfo, init);
-  };
+  nativeFetch = window.fetch.bind(window);
+  window.fetch = patchedFetch;
 
-  const nativeOpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function patchedOpen(
-    this: XMLHttpRequest,
-    method: string,
-    url: string | URL,
-    ...rest: unknown[]
-  ) {
-    const href = typeof url === 'string' ? url : url.href;
-    if (record(href)) {
-      throw new Error(
-        `AetherMask air-gap enforcement: blocked external XHR to ${href}`,
-      );
-    }
-    return (
-      nativeOpen as (
-        this: XMLHttpRequest,
-        m: string,
-        u: string | URL,
-        ...r: unknown[]
-      ) => void
-    ).call(this, method, url, ...rest);
-  } as typeof XMLHttpRequest.prototype.open;
+  nativeOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = patchedOpen as typeof XMLHttpRequest.prototype.open;
 
   // Passive observation of sub-resource loads (images, styles, scripts) that
   // bypass fetch/XHR entirely. Reported, since they cannot be blocked here.
   if ('PerformanceObserver' in window) {
     try {
-      const observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          const name = entry.name;
-          if (isExternal(name) && !ledger.external.includes(name)) {
-            ledger.external.push(name);
-            notify();
-          }
-        }
-      });
+      const observer = new PerformanceObserver(observeResourceEntries);
       observer.observe({ entryTypes: ['resource'] });
     } catch {
       /* PerformanceObserver unsupported - fetch/XHR coverage still applies */

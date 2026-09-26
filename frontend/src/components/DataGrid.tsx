@@ -26,7 +26,6 @@ import {
   rowSortingFeature,
   tableFeatures,
   useTable,
-  type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table';
 import { m } from 'motion/react';
@@ -38,13 +37,10 @@ import {
   ChevronsUpDown,
   Search,
 } from 'lucide-react';
-import type { FramePreview } from '../lib/types';
+import type { FramePreview, GridCellValue, GridRow } from '../lib/types';
 import { displayCell, formatInt } from '../lib/format';
 import { easeQuick, listItemVariants, listVariants } from '../lib/motion';
 import { inputClass } from './ui/Primitives';
-
-/** A preview row is an index-keyed record of cell values. */
-type GridRow = Record<string, string | number | boolean | null>;
 
 const gridFeatures = tableFeatures({
   rowSortingFeature,
@@ -58,6 +54,10 @@ const gridFeatures = tableFeatures({
 });
 
 const columnHelper = createColumnHelper<typeof gridFeatures, GridRow>();
+
+type GridColumns = NonNullable<
+  Parameters<typeof useTable<typeof gridFeatures, GridRow>>[0]['columns']
+>;
 
 export interface DataGridProps {
   frame: FramePreview;
@@ -94,15 +94,15 @@ export function DataGrid({
     });
   }, [frame]);
 
-  const columns = useMemo<ColumnDef<typeof gridFeatures, GridRow, any>[]>(() => {
+  const columns = useMemo<GridColumns>(() => {
     return frame.columns.map((col, i) =>
       columnHelper.accessor((row) => row[col], {
         id: col,
         header: col,
         meta: { dtype: frame.dtypes[i] ?? '' },
-        cell: (ctx) => displayCell(ctx.getValue() as GridRow[string]),
+        cell: (ctx) => displayCell(ctx.getValue() as GridCellValue),
       }),
-    );
+    ) as unknown as GridColumns;
   }, [frame]);
 
   // Client-side global filter across every visible cell.

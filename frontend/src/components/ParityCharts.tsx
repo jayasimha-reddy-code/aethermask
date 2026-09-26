@@ -80,7 +80,7 @@ function ParityTooltip({
               point.delta === 0 ? 'text-signal-400 font-medium' : 'text-classified-400 font-medium'
             }
           >
-            {point.delta === 0 ? '0 — exact' : formatInt(point.delta)}
+            {point.delta === 0 ? '0 (exact)' : formatInt(point.delta)}
           </dd>
         </div>
         <div className="flex justify-between gap-6">
@@ -104,7 +104,7 @@ export function ParityCharts({ chart }: { chart: ChartBlock }) {
       return {
         index: i,
         originalName: orig.name,
-        sanitizedName: san?.name ?? '—',
+        sanitizedName: san?.name ?? '-',
         confidential: orig.value,
         sanitized: sanitizedValue,
         delta: Math.abs(orig.value - sanitizedValue),
@@ -146,8 +146,8 @@ export function ParityCharts({ chart }: { chart: ChartBlock }) {
               className={`text-xs font-medium ${exact ? 'text-signal-400' : 'text-caution-400'}`}
             >
               {exact
-                ? 'Aggregate parity exact — Σ|Δ| = 0'
-                : `Aggregate drift detected — Σ|Δ| = ${formatInt(totalDelta)}`}
+                ? 'Aggregate parity exact: Σ|Δ| = 0'
+                : `Aggregate drift detected: Σ|Δ| = ${formatInt(totalDelta)}`}
             </div>
             <p className="mt-0.5 text-xs text-slate-400">
               GROUP BY <span className="tabular">{chart.category_column}</span>,

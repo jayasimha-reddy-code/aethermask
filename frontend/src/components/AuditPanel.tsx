@@ -75,7 +75,7 @@ export function AuditPanel({
           </h3>
           <p className="mt-1 text-xs leading-relaxed text-slate-400">
             Recomputes row counts, cardinality, null topologies and numeric sums
-            directly from the three files — independently of the engine that produced them.
+            directly from the three files: independently of the engine that produced them.
           </p>
         </div>
 
@@ -155,8 +155,8 @@ export function AuditPanel({
                         }`}
                       >
                         {result.passed
-                          ? 'Audit verified — artifact is an isomorphic image'
-                          : `Audit failed — ${formatInt(result.failed_checks)} discrepancy(ies)`}
+                          ? 'Audit verified: artifact is an isomorphic image'
+                          : `Audit failed: ${formatInt(result.failed_checks)} discrepancy(ies)`}
                       </div>
                       <p className="mt-0.5 text-xs text-slate-400">
                         {formatInt(passedCount)} of {formatInt(result.total_checks)}{' '}

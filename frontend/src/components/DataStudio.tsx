@@ -75,7 +75,6 @@ import {
 import { useEgressWatch } from '../lib/useEgressWatch';
 
 import {
-  Alert,
   Badge,
   Button,
   Copyable,
@@ -96,126 +95,20 @@ import { CommandPalette, useCommandPaletteHotkey, type Command } from './Command
 import { DryRunPreview } from './DryRunPreview';
 import { AuditPanel } from './AuditPanel';
 import { Kbd, useToasts } from './ui/Toasts';
-
-/* -------------------------------------------------------------------------- */
-/*  Stage metadata                                                             */
-/* -------------------------------------------------------------------------- */
-
-const STAGES: {
-  id: Stage;
-  label: string;
-  Icon: typeof Database;
-  blurb: string;
-}[] = [
-  { id: 'ingest', label: 'Ingest', Icon: Database, blurb: 'Load source dataset' },
-  { id: 'profile', label: 'Profile', Icon: ScanSearch, blurb: 'Analyze sensitivity' },
-  { id: 'transform', label: 'Transform', Icon: ArrowLeftRight, blurb: 'Cover domain projection' },
-  { id: 'export', label: 'Vault', Icon: Vault, blurb: 'Cryptographic vault' },
-  { id: 'restore', label: 'Restore', Icon: RotateCcw, blurb: 'Lossless de-anonymization' },
-  { id: 'audit', label: 'Audit', Icon: ScanLine, blurb: 'Independent verification' },
-];
-
-const STAGE_INDEX: Record<Stage, number> = {
-  ingest: 0,
-  profile: 1,
-  transform: 2,
-  export: 3,
-  restore: 4,
-  audit: 5,
-};
+import { StageRail, STAGES } from './StageRail';
+import { StatusStrip } from './StatusStrip';
+import { usePipelineStageReducer } from '../lib/usePipelineStageReducer';
 
 const ACCEPT_DATA = '.csv,.tsv,.parquet,.xlsx,.xls,.json,.sql,.txt';
 const ACCEPT_MAP = '.ciphermap,.json';
-
-/* ========================================================================== */
-/*  Stage rail                                                                 */
-/* ========================================================================== */
-
-function StageRail({
-  stage,
-  onJump,
-  reachable,
-}: {
-  stage: Stage;
-  onJump: (s: Stage) => void;
-  reachable: Set<Stage>;
-}) {
-  return (
-    <nav aria-label="Pipeline stage" className="w-full">
-      <ol className="flex items-stretch gap-2 overflow-x-auto pb-1">
-        {STAGES.map(({ id, label, Icon, blurb }, i) => {
-          const active = id === stage;
-          const done = STAGE_INDEX[id] < STAGE_INDEX[stage];
-          const available = reachable.has(id);
-          return (
-            <li key={id} className="min-w-0 flex-1">
-              <button
-                type="button"
-                onClick={() => available && onJump(id)}
-                disabled={!available}
-                aria-current={active ? 'step' : undefined}
-                className={`relative flex w-full items-center gap-2.5 overflow-hidden rounded-lg border px-3 py-2 text-left outline-none transition-colors duration-150 ${
-                  active
-                    ? 'border-signal-500/40 bg-signal-500/8'
-                    : available
-                      ? 'cursor-pointer border-white/8 bg-abyss-850/60 hover:border-white/16 hover:bg-abyss-800/60'
-                      : 'cursor-not-allowed border-white/4 bg-abyss-900/30 opacity-40'
-                }`}
-              >
-                {active ? (
-                  <span
-                    className="absolute inset-x-0 bottom-0 h-0.5 bg-signal-500"
-                    aria-hidden="true"
-                  />
-                ) : null}
-
-                <span
-                  className={`flex size-6 shrink-0 items-center justify-center rounded-md ${
-                    active
-                      ? 'bg-signal-500 text-abyss-950 font-medium'
-                      : done
-                        ? 'bg-signal-500/15 text-signal-400'
-                        : 'bg-abyss-800 text-slate-500'
-                  }`}
-                  aria-hidden="true"
-                >
-                  {done && !active ? (
-                    <CheckCircle2 size={13} />
-                  ) : (
-                    <Icon size={13} />
-                  )}
-                </span>
-
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={`block truncate text-xs font-medium ${
-                      active ? 'text-signal-400' : 'text-slate-200'
-                    }`}
-                  >
-                    <span className="tabular mr-1 text-slate-500">{i + 1}</span>
-                    {label}
-                  </span>
-                  <span className="hidden truncate text-[11px] text-slate-500 lg:block">
-                    {blurb}
-                  </span>
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-}
 
 /* ========================================================================== */
 /*  Main component                                                             */
 /* ========================================================================== */
 
 export default function DataStudio() {
-  /* ---- pipeline state ---- */
-  const [stage, setStage] = useState<Stage>('ingest');
-  const [direction, setDirection] = useState(1);
+  /* ---- pipeline stage state machine ---- */
+  const { stage, direction, go: dispatchStage } = usePipelineStageReducer('ingest');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -297,13 +190,13 @@ export default function DataStudio() {
     return () => window.clearTimeout(t);
   }, [notice]);
 
-  const go = useCallback((next: Stage) => {
-    setStage((current) => {
-      setDirection(STAGE_INDEX[next] >= STAGE_INDEX[current] ? 1 : -1);
-      return next;
-    });
-    setError(null);
-  }, []);
+  const go = useCallback(
+    (next: Stage) => {
+      setError(null);
+      dispatchStage(next);
+    },
+    [dispatchStage],
+  );
 
   const reachable = useMemo(() => {
     const set = new Set<Stage>(['ingest', 'restore', 'audit']);
@@ -774,41 +667,14 @@ export default function DataStudio() {
       {/* ---------------------------------------------------------------- */}
       {/*  Status strip                                                     */}
       {/* ---------------------------------------------------------------- */}
-      <div className="mx-auto max-w-[1600px] px-6">
-        <AnimatePresence mode="popLayout">
-          {busy ? (
-            <m.div
-              key="busy"
-              variants={revealVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="mt-4 flex items-center gap-3 rounded-xl border border-signal-500/20 bg-signal-500/5 px-4 py-2.5"
-              role="status"
-              aria-live="polite"
-            >
-              <Activity size={14} className="shrink-0 text-signal-400" aria-hidden="true" />
-              <span className="text-xs text-signal-400">{busy}</span>
-            </m.div>
-          ) : null}
-
-          {error ? (
-            <m.div key="error" className="mt-4" layout>
-              <Alert tone="error" title="Operation failed" onDismiss={() => setError(null)}>
-                {error}
-              </Alert>
-            </m.div>
-          ) : null}
-
-          {notice ? (
-            <m.div key="notice" className="mt-4" layout>
-              <Alert tone="info" title="Ready" onDismiss={() => setNotice(null)}>
-                {notice}
-              </Alert>
-            </m.div>
-          ) : null}
-        </AnimatePresence>
-      </div>
+      <StatusStrip
+        busy={busy}
+        error={error}
+        notice={notice}
+        revealVariants={revealVariants}
+        onDismissError={() => setError(null)}
+        onDismissNotice={() => setNotice(null)}
+      />
 
       {/* ---------------------------------------------------------------- */}
       {/*  Stage content                                                    */}
@@ -1092,7 +958,7 @@ export default function DataStudio() {
                         Source dataset
                       </div>
                       <div className="tabular mt-0.5 truncate text-xs font-medium text-slate-200">
-                        {file ? file.name : '— none selected —'}
+                        {file ? file.name : '(none selected)'}
                       </div>
                       {file ? (
                         <div className="mt-0.5 text-xs text-slate-500">
@@ -1411,7 +1277,7 @@ export default function DataStudio() {
                           <PanelHeader
                             icon={<Table2 size={15} />}
                             title="Restored dataset preview"
-                            subtitle={`Table “${rResult.preview.table}” — original headers and values recovered`}
+                            subtitle={`Table "${rResult.preview.table}" (original headers and values recovered)`}
                           />
                           <div className="h-[420px]">
                             <DataGrid
@@ -1505,7 +1371,7 @@ export default function DataStudio() {
       <footer className="mx-auto max-w-[1600px] px-6 pt-2 pb-8">
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/8 pt-4 text-xs text-slate-500">
           <span>
-            AetherMask · CipherShift — local processing only. Zero external egress.
+            AetherMask · CipherShift: local processing only. Zero external egress.
           </span>
           <span className="tabular flex items-center gap-3">
             <span>UI v{__AETHERMASK_UI_VERSION__}</span>

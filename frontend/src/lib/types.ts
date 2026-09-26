@@ -6,6 +6,9 @@
  * server shape locally.
  */
 
+export type GridCellValue = string | number | boolean | null;
+export type GridRow = Record<string, GridCellValue>;
+
 export interface FramePreview {
   columns: string[];
   dtypes: string[];

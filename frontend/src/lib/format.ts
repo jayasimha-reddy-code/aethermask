@@ -5,15 +5,19 @@
  * runtime already provides the data locally.
  */
 
+const BYTES_PER_KB = 1024;
+const COMPACT_THRESHOLD = 1000;
+const DASH_PLACEHOLDER = '-';
+
 /** Human-readable byte size. */
 export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return '—';
-  if (bytes < 1024) return `${bytes} B`;
+  if (!Number.isFinite(bytes) || bytes < 0) return DASH_PLACEHOLDER;
+  if (bytes < BYTES_PER_KB) return `${bytes} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];
-  let value = bytes / 1024;
+  let value = bytes / BYTES_PER_KB;
   let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
+  while (value >= BYTES_PER_KB && unit < units.length - 1) {
+    value /= BYTES_PER_KB;
     unit += 1;
   }
   return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[unit]}`;
@@ -21,14 +25,14 @@ export function formatBytes(bytes: number): string {
 
 /** Thousands-separated integer. */
 export function formatInt(n: number | null | undefined): string {
-  if (n === null || n === undefined || !Number.isFinite(n)) return '—';
+  if (n === null || n === undefined || !Number.isFinite(n)) return DASH_PLACEHOLDER;
   return n.toLocaleString('en-US');
 }
 
 /** Compact number for dense chips (1.2k, 3.4M). */
 export function formatCompact(n: number | null | undefined): string {
-  if (n === null || n === undefined || !Number.isFinite(n)) return '—';
-  if (Math.abs(n) < 1000) return String(n);
+  if (n === null || n === undefined || !Number.isFinite(n)) return DASH_PLACEHOLDER;
+  if (Math.abs(n) < COMPACT_THRESHOLD) return String(n);
   return new Intl.NumberFormat('en-US', {
     notation: 'compact',
     maximumFractionDigits: 1,
@@ -37,7 +41,7 @@ export function formatCompact(n: number | null | undefined): string {
 
 /** Percentage with a single decimal. */
 export function formatPct(ratio: number | null | undefined): string {
-  if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return '—';
+  if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return DASH_PLACEHOLDER;
   return `${(ratio * 100).toFixed(1)}%`;
 }
 
@@ -55,7 +59,7 @@ export function displayCell(
 
 /** Abbreviate a long hash for inline display, keeping head and tail. */
 export function shortHash(hash: string, head = 10, tail = 6): string {
-  if (!hash) return '—';
+  if (!hash) return DASH_PLACEHOLDER;
   if (hash.length <= head + tail + 1) return hash;
   return `${hash.slice(0, head)}…${hash.slice(-tail)}`;
 }

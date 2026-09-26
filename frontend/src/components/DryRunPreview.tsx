@@ -1,7 +1,7 @@
 /**
  * AetherMask (CipherShift) :: dry-run preview
  *
- * Surfaces `POST /api/v1/preview` — a transformation rehearsal that produces
+ * Surfaces `POST /api/v1/preview`: a transformation rehearsal that produces
  * no vault and no downloadable artifact.
  */
 
@@ -74,7 +74,7 @@ export function DryRunPreview({
                 }`}
               >
                 {preview.fidelity.passed
-                  ? 'Dry run verified — isomorphism holds'
+                  ? 'Dry run verified: isomorphism holds'
                   : 'Dry run identified drift'}
               </div>
               <p className="mt-0.5 text-xs text-slate-400">
