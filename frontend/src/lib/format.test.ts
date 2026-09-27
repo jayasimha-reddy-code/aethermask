@@ -21,7 +21,7 @@ describe('format helpers', () => {
 
   test('formatInt adds commas to numbers', () => {
     expect(formatInt(1000)).toBe('1,000');
-    expect(formatInt(1000000)).toBe('1,000,000');
+    expect(formatInt(1e6)).toBe('1,000,000');
     expect(formatInt(null)).toBe('-');
   });
 

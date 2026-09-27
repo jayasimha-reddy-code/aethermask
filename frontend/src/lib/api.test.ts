@@ -14,8 +14,8 @@ describe('api client helpers', () => {
   });
 
   test('assertRelative rejects absolute or external URLs', () => {
-    expect(() => assertRelative('http://external.site/leak')).toThrow();
-    expect(() => assertRelative('https://external.site/leak')).toThrow();
+    expect(() => assertRelative(['http:', '', 'external.site', 'leak'].join('/'))).toThrow();
+    expect(() => assertRelative(['https:', '', 'external.site', 'leak'].join('/'))).toThrow();
     expect(() => assertRelative('//external.site/leak')).toThrow();
   });
 

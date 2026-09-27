@@ -77,25 +77,11 @@ export function usePipelineStageReducer(initialStage: Stage = 'ingest') {
     dispatch({ type: 'GO', target });
   }, []);
 
-  const next = useCallback(() => {
-    dispatch({ type: 'NEXT' });
-  }, []);
-
-  const prev = useCallback(() => {
-    dispatch({ type: 'PREV' });
-  }, []);
-
-  const reset = useCallback(() => {
-    dispatch({ type: 'RESET' });
-  }, []);
-
   return {
     stage: state.stage,
     direction: state.direction,
     visited: state.visited,
     go,
-    next,
-    prev,
-    reset,
+    dispatch,
   };
 }
