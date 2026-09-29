@@ -16,15 +16,15 @@ import {
   Database,
   KeyRound,
 } from 'lucide-react';
-import type { ColumnProfileInfo, ProfileResponse } from '../lib/types';
+import type { ColumnProfileInfo, ProfileResponse } from '../../lib/types';
 import {
   formatInt,
   formatPct,
   severityLabel,
-} from '../lib/format';
-import { easeQuick } from '../lib/motion';
-import { Badge, MeterBar, Stat } from './ui/Primitives';
-import { SearchInput } from './DataGrid';
+} from '../../lib/format';
+import { easeQuick } from '../../lib/motion';
+import { Badge, MeterBar, Stat } from '../ui/Primitives';
+import { SearchInput } from '../grid/DataGrid';
 
 function severityTone(
   severity: number,

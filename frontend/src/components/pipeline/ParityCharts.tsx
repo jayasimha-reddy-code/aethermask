@@ -22,9 +22,9 @@ import {
 } from 'recharts';
 import { AnimatePresence, m } from 'motion/react';
 import { BarChart3, LineChart as LineIcon, Sigma } from 'lucide-react';
-import type { ChartBlock } from '../lib/types';
-import { formatCompact, formatInt } from '../lib/format';
-import { fadeVariants, verdictVariants } from '../lib/motion';
+import type { ChartBlock } from '../../lib/types';
+import { formatCompact, formatInt } from '../../lib/format';
+import { fadeVariants, verdictVariants } from '../../lib/motion';
 
 const COLOR_CLASSIFIED = '#f87171';
 const COLOR_SIGNAL = '#2dd4bf';

@@ -27,8 +27,8 @@ import {
 } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { CornerDownLeft, Search } from 'lucide-react';
-import { backdropVariants } from '../lib/motion';
-import { useRevealVariants } from '../lib/useReducedMotionVariants';
+import { backdropVariants } from '../../lib/motion';
+import { useRevealVariants } from '../../hooks/useReducedMotionVariants';
 
 export interface Command {
   id: string;

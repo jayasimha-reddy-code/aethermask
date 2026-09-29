@@ -18,15 +18,15 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react';
-import type { AttestationResponse } from '../lib/types';
-import { formatInt } from '../lib/format';
+import type { AttestationResponse } from '../../lib/types';
+import { formatInt } from '../../lib/format';
 import {
   backdropVariants,
   drawerVariants,
   listItemVariants,
   listVariants,
-} from '../lib/motion';
-import { Badge } from './ui/Primitives';
+} from '../../lib/motion';
+import { Badge } from '../ui/Primitives';
 
 function Row({
   label,

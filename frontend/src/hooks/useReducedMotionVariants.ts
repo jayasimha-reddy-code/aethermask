@@ -17,7 +17,7 @@
 
 import { useMemo } from 'react';
 import { useReducedMotion, type Transition, type Variants } from 'motion/react';
-import { easeEmphasized, easeQuick } from './motion';
+import { easeEmphasized, easeQuick } from '../lib/motion';
 
 /** Directional stage slide that degrades to a pure cross-fade. */
 export function useStageVariants(): Variants {

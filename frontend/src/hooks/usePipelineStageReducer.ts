@@ -1,6 +1,6 @@
 import { useReducer, useCallback } from 'react';
-import type { Stage } from './types';
-import { STAGE_INDEX, STAGES } from '../components/StageRail';
+import type { Stage } from '../lib/types';
+import { STAGE_INDEX, STAGES } from '../components/navigation/StageRail';
 
 export interface PipelineStageState {
   stage: Stage;

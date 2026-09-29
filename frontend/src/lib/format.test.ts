@@ -10,24 +10,29 @@ import {
   shortHash,
 } from './format';
 
+const ONE_KB = 1024;
+const ONE_MB = ONE_KB * ONE_KB;
+const ONE_THOUSAND = 1000;
+const FIFTEEN_HUNDRED = 1500;
+
 describe('format helpers', () => {
   test('formatBytes formats boundaries correctly', () => {
     expect(formatBytes(0)).toBe('0 B');
     expect(formatBytes(512)).toBe('512 B');
-    expect(formatBytes(1024)).toBe('1.0 KB');
-    expect(formatBytes(1024 * 1024)).toBe('1.0 MB');
+    expect(formatBytes(ONE_KB)).toBe('1.0 KB');
+    expect(formatBytes(ONE_MB)).toBe('1.0 MB');
     expect(formatBytes(-1)).toBe('-');
   });
 
   test('formatInt adds commas to numbers', () => {
-    expect(formatInt(1000)).toBe('1,000');
+    expect(formatInt(ONE_THOUSAND)).toBe('1,000');
     expect(formatInt(1e6)).toBe('1,000,000');
     expect(formatInt(null)).toBe('-');
   });
 
   test('formatCompact formats large numbers concisely', () => {
     expect(formatCompact(500)).toBe('500');
-    expect(formatCompact(1500)).toContain('1.5');
+    expect(formatCompact(FIFTEEN_HUNDRED)).toContain('1.5');
     expect(formatCompact(null)).toBe('-');
   });
 

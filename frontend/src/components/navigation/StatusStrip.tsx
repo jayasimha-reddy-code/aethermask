@@ -1,7 +1,7 @@
 import { AnimatePresence, m } from 'motion/react';
 import { Activity } from 'lucide-react';
 import type { Variants } from 'motion/react';
-import { Alert } from './ui/Primitives';
+import { Alert } from '../ui/Primitives';
 
 export interface StatusStripProps {
   busy: string | null;

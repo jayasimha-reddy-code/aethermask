@@ -7,7 +7,7 @@ import {
   ScanSearch,
   Vault,
 } from 'lucide-react';
-import type { Stage } from '../lib/types';
+import type { Stage } from '../../lib/types';
 
 export const STAGES: {
   id: Stage;

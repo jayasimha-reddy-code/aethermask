@@ -8,15 +8,15 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, m } from 'motion/react';
 import { CheckCircle2, ScanLine, ShieldAlert, XCircle } from 'lucide-react';
-import type { VerifyResponse } from '../lib/api';
-import { formatInt, shortHash } from '../lib/format';
+import type { VerifyResponse } from '../../lib/api';
+import { formatInt, shortHash } from '../../lib/format';
 import {
   useListVariants,
   useVerdictVariants,
-} from '../lib/useReducedMotionVariants';
-import { Badge, Button, Copyable, EmptyState, MeterBar } from './ui/Primitives';
-import { DropZone, PassphraseField } from './Controls';
-import { SearchInput } from './DataGrid';
+} from '../../hooks/useReducedMotionVariants';
+import { Badge, Button, Copyable, EmptyState, MeterBar } from '../ui/Primitives';
+import { DropZone, PassphraseField } from '../pipeline/Controls';
+import { SearchInput } from '../grid/DataGrid';
 
 export function AuditPanel({
   originalFile,

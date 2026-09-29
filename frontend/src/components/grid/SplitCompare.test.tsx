@@ -1,5 +1,5 @@
 import { SplitCompare } from './SplitCompare';
-import type { FramePreview } from '../lib/types';
+import type { FramePreview } from '../../lib/types';
 
 describe('SplitCompare component', () => {
   const dummyFrame: FramePreview = {

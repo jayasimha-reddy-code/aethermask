@@ -1,5 +1,5 @@
 import { DataGrid } from './DataGrid';
-import type { FramePreview } from '../lib/types';
+import type { FramePreview } from '../../lib/types';
 
 describe('DataGrid component', () => {
   const dummyFrame: FramePreview = {

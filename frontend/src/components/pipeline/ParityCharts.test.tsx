@@ -1,5 +1,5 @@
 import { ParityCharts } from './ParityCharts';
-import type { ChartBlock } from '../lib/types';
+import type { ChartBlock } from '../../lib/types';
 
 describe('ParityCharts component', () => {
   const dummyChart: ChartBlock = {

@@ -19,13 +19,13 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import type { DomainProfileInfo, NumericMode } from '../lib/types';
-import { formatBytes, formatInt, passphraseStrength } from '../lib/format';
+import type { DomainProfileInfo, NumericMode } from '../../lib/types';
+import { formatBytes, formatInt, passphraseStrength } from '../../lib/format';
 import {
   fadeVariants,
   revealVariants,
-} from '../lib/motion';
-import { Badge, Field, MeterBar, inputClass } from './ui/Primitives';
+} from '../../lib/motion';
+import { Badge, Field, MeterBar, inputClass } from '../ui/Primitives';
 
 /* -------------------------------------------------------------------------- */
 /*  DropZone                                                                   */

@@ -7,11 +7,11 @@
 
 import { m } from 'motion/react';
 import { Eye, Loader2, Play, ShieldQuestion } from 'lucide-react';
-import type { PreviewResponse } from '../lib/api';
-import { formatInt } from '../lib/format';
-import { useVerdictVariants } from '../lib/useReducedMotionVariants';
-import { Badge, Button, EmptyState } from './ui/Primitives';
-import { SplitCompare } from './SplitCompare';
+import type { PreviewResponse } from '../../lib/api';
+import { formatInt } from '../../lib/format';
+import { useVerdictVariants } from '../../hooks/useReducedMotionVariants';
+import { Badge, Button, EmptyState } from '../ui/Primitives';
+import { SplitCompare } from '../grid/SplitCompare';
 import { ParityCharts } from './ParityCharts';
 
 export function DryRunPreview({

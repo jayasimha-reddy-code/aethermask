@@ -37,10 +37,10 @@ import {
   ChevronsUpDown,
   Search,
 } from 'lucide-react';
-import type { FramePreview, GridCellValue, GridRow } from '../lib/types';
-import { displayCell, formatInt } from '../lib/format';
-import { easeQuick, listItemVariants, listVariants } from '../lib/motion';
-import { inputClass } from './ui/Primitives';
+import type { FramePreview, GridCellValue, GridRow } from '../../lib/types';
+import { displayCell, formatInt } from '../../lib/format';
+import { easeQuick, listItemVariants, listVariants } from '../../lib/motion';
+import { inputClass } from '../ui/Primitives';
 
 const gridFeatures = tableFeatures({
   rowSortingFeature,

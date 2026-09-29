@@ -9,10 +9,10 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { m } from 'motion/react';
 import { ArrowRight, EyeOff, GripVertical, Shield, ShieldCheck } from 'lucide-react';
-import type { FramePreview } from '../lib/types';
+import type { FramePreview } from '../../lib/types';
 import { DataGrid } from './DataGrid';
-import { Badge } from './ui/Primitives';
-import { listItemVariants, listVariants } from '../lib/motion';
+import { Badge } from '../ui/Primitives';
+import { listItemVariants, listVariants } from '../../lib/motion';
 
 const STRATEGY_LABEL: Record<string, string> = {
   identity: 'Untouched',
