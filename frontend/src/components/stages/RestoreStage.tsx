@@ -4,6 +4,7 @@ import { formatBytes, formatInt } from '../../lib/format';
 import { Button, EmptyState, Panel, PanelHeader, Stat } from '../ui/Primitives';
 import { DropZone, PassphraseField } from '../pipeline/Controls';
 import { DataGrid } from '../grid/DataGrid';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 
 export interface RestoreStageProps {
   rFile: File | null;
@@ -140,11 +141,13 @@ export function RestoreStage({
                   subtitle={`Table "${rResult.preview.table}" (original headers and values recovered)`}
                 />
                 <div className="h-[420px]">
-                  <DataGrid
-                    frame={rResult.preview.restored}
-                    tone="classified"
-                    pageSize={12}
-                  />
+                  <ErrorBoundary fallbackTitle="Restored dataset preview unavailable">
+                    <DataGrid
+                      frame={rResult.preview.restored}
+                      tone="classified"
+                      pageSize={12}
+                    />
+                  </ErrorBoundary>
                 </div>
               </Panel>
             ) : null}

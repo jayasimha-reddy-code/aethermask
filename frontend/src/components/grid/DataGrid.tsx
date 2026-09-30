@@ -71,6 +71,58 @@ export interface DataGridProps {
   emptyLabel?: string;
 }
 
+function buildGridRecords(frame?: FramePreview): GridRow[] {
+  const cols = Array.isArray(frame?.columns) ? frame.columns : [];
+  const rows = Array.isArray(frame?.rows) ? frame.rows : [];
+  return rows.map((row) => {
+    const record: GridRow = {};
+    cols.forEach((col, i) => {
+      const colName = col != null ? String(col) : '';
+      const key = colName.trim() ? colName : `col_${i + 1}`;
+      record[key] = row?.[i] ?? null;
+      if (colName && colName !== key) {
+        record[colName] = row?.[i] ?? null;
+      }
+    });
+    return record;
+  });
+}
+
+function buildGridColumns(frame?: FramePreview): GridColumns {
+  const seen = new Set<string>();
+  const cols = Array.isArray(frame?.columns) ? frame.columns : [];
+  const dtypes = Array.isArray(frame?.dtypes) ? frame.dtypes : [];
+
+  return cols.map((rawCol, i) => {
+    const colName = rawCol != null ? String(rawCol) : '';
+    let colId = colName.trim() ? colName : `col_${i + 1}`;
+    if (seen.has(colId)) {
+      colId = `${colId}_${i + 1}`;
+    }
+    seen.add(colId);
+
+    return columnHelper.accessor(
+      (row) => row[colId] ?? (colName ? row[colName] : null),
+      {
+        id: colId,
+        header: colName.trim() || `(Column ${i + 1})`,
+        meta: { dtype: dtypes[i] ?? '' },
+        cell: (ctx) => displayCell(ctx.getValue() as GridCellValue),
+      },
+    );
+  }) as unknown as GridColumns;
+}
+
+function filterGridRows(data: GridRow[], query: string): GridRow[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return data;
+  return data.filter((row) =>
+    Object.values(row).some((v) =>
+      v === null ? false : String(v).toLowerCase().includes(q),
+    ),
+  );
+}
+
 export function DataGrid({
   frame,
   tone = 'neutral',
@@ -83,38 +135,13 @@ export function DataGrid({
   const [query, setQuery] = useState('');
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize });
 
-  // Convert the server's column/row arrays into records once per frame.
-  const data = useMemo<GridRow[]>(() => {
-    return frame.rows.map((row) => {
-      const record: GridRow = {};
-      frame.columns.forEach((col, i) => {
-        record[col] = row[i] ?? null;
-      });
-      return record;
-    });
-  }, [frame]);
+    // Convert the server's column/row arrays into records once per frame.
+  const data = useMemo<GridRow[]>(() => buildGridRecords(frame), [frame]);
 
-  const columns = useMemo<GridColumns>(() => {
-    return frame.columns.map((col, i) =>
-      columnHelper.accessor((row) => row[col], {
-        id: col,
-        header: col,
-        meta: { dtype: frame.dtypes[i] ?? '' },
-        cell: (ctx) => displayCell(ctx.getValue() as GridCellValue),
-      }),
-    ) as unknown as GridColumns;
-  }, [frame]);
+  const columns = useMemo<GridColumns>(() => buildGridColumns(frame), [frame]);
 
   // Client-side global filter across every visible cell.
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return data;
-    return data.filter((row) =>
-      Object.values(row).some((v) =>
-        v === null ? false : String(v).toLowerCase().includes(q),
-      ),
-    );
-  }, [data, query]);
+  const filtered = useMemo(() => filterGridRows(data, query), [data, query]);
 
   const table = useTable({
     features: gridFeatures,
@@ -226,7 +253,7 @@ export function DataGrid({
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={Math.max(1, frame.columns.length)}
+                  colSpan={Math.max(1, frame?.columns?.length ?? 1)}
                   className="px-3 py-10 text-center text-xs text-slate-500"
                 >
                   {emptyLabel}
@@ -262,7 +289,7 @@ export function DataGrid({
         <span className="tabular text-[11px] text-slate-500">
           Showing {formatInt(rows.length)} of {formatInt(filtered.length)}
           {' · '}
-          {formatInt(frame.total_rows)} total rows × {frame.total_columns} cols
+          {formatInt(frame?.total_rows ?? 0)} total rows × {frame?.total_columns ?? 0} cols
         </span>
         <div className="flex items-center gap-1.5">
           <m.button

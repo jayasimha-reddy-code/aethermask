@@ -11,6 +11,7 @@ import { m } from 'motion/react';
 import { ArrowRight, EyeOff, GripVertical, Shield, ShieldCheck } from 'lucide-react';
 import type { FramePreview } from '../../lib/types';
 import { DataGrid } from './DataGrid';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { Badge } from '../ui/Primitives';
 import { listItemVariants, listVariants } from '../../lib/motion';
 
@@ -117,13 +118,15 @@ export function SplitCompare({
             </span>
           </div>
           <div className="min-h-0 flex-1">
-            <DataGrid
-              frame={original}
-              tone="classified"
-              highlight={hotOriginal}
-              pageSize={10}
-              emptyLabel="No source rows"
-            />
+            <ErrorBoundary fallbackTitle="Source preview table unavailable">
+              <DataGrid
+                frame={original}
+                tone="classified"
+                highlight={hotOriginal}
+                pageSize={10}
+                emptyLabel="No source rows"
+              />
+            </ErrorBoundary>
           </div>
         </div>
 
@@ -170,13 +173,15 @@ export function SplitCompare({
             </span>
           </div>
           <div className="min-h-0 flex-1">
-            <DataGrid
-              frame={sanitized}
-              tone="signal"
-              highlight={hotMasked}
-              pageSize={10}
-              emptyLabel="No sanitized rows"
-            />
+            <ErrorBoundary fallbackTitle="Sanitized preview table unavailable">
+              <DataGrid
+                frame={sanitized}
+                tone="signal"
+                highlight={hotMasked}
+                pageSize={10}
+                emptyLabel="No sanitized rows"
+              />
+            </ErrorBoundary>
           </div>
         </div>
       </div>
