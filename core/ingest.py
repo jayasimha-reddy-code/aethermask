@@ -179,6 +179,7 @@ class DataIngestor:
     #  CSV / TSV
     # ------------------------------------------------------------------ #
     def _load_csv(self, data: bytes, filename: str, stem: str, ext: str) -> IngestResult:
+        data = self._normalize_csv_bytes(data)
         sep = "\t" if ext == ".tsv" else self._sniff_separator(data)
         try:
             df = pl.read_csv(
@@ -200,6 +201,33 @@ class DataIngestor:
             csv_separator=sep, original_filename=filename,
         )
         return IngestResult({stem: df}, man)
+
+    @staticmethod
+    def _normalize_csv_bytes(data: bytes) -> bytes:
+        """
+        Normalize legacy line endings (CR or CRLF to LF) and non-UTF-8 encodings
+        (such as Windows-1252 or Latin-1) so Polars ingests rows and columns reliably.
+        """
+        if b"\r" not in data:
+            try:
+                data.decode("utf-8")
+                return data
+            except UnicodeDecodeError:
+                pass
+
+        text: Optional[str] = None
+        for enc in ("utf-8-sig", "utf-8", "cp1252", "latin1", "iso-8859-1"):
+            try:
+                text = data.decode(enc)
+                break
+            except UnicodeDecodeError:
+                continue
+
+        if text is None:
+            text = data.decode("utf-8", errors="replace")
+
+        norm = text.replace("\r\n", "\n").replace("\r", "\n")
+        return norm.encode("utf-8")
 
     @staticmethod
     def _sniff_separator(data: bytes) -> str:

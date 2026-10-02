@@ -829,7 +829,16 @@ async def verify(
             "ok": os_.null_count() == ms_.null_count(),
             "detail": f"{os_.null_count()} vs {ms_.null_count()}",
         })
-        if os_.dtype.is_numeric() and ms_.dtype.is_numeric():
+        meta = (
+            payload.get("column_meta", {}).get(f"{o_first}.{c}")
+            or payload.get("column_meta", {}).get(c, {})
+        )
+        is_id = (
+            meta.get("role") == "identifier"
+            or meta.get("strategy") == "numeric_identifier_bijection"
+        )
+        is_affine = meta.get("strategy") == "affine"
+        if os_.dtype.is_numeric() and ms_.dtype.is_numeric() and not is_id and not is_affine:
             checks.append({
                 "check": f"sum::{c}",
                 "ok": OfflineIsomorphicEngine._num_eq(os_.sum(), ms_.sum()),

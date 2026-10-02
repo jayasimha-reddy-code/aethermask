@@ -700,8 +700,8 @@ class OfflineIsomorphicEngine:
     def _mask_numeric_identifier(self, series: pl.Series, name: str) -> pl.Series:
         """
         Bijectively relabel a numeric key while keeping the numeric dtype and
-        the digit-width, so joins and any downstream integer arithmetic on the
-        key space continue to behave identically.
+        preventing leading-zero integer collisions, so joins and downstream
+        arithmetic on the key space continue to behave identically.
         """
         out: List[Optional[int]] = []
         for v in series.to_list():
@@ -712,25 +712,27 @@ class OfflineIsomorphicEngine:
             existing = self.values.get(src)
             if existing is None:
                 token = self._format_preserving_token(src, salt="numid")
-                # Guarantee it parses as an integer of identical width.
-                digits = "".join(ch for ch in token if ch.isdigit())
-                if not digits:
-                    digits = self._digest("numid-fb", src).hex()
-                    digits = "".join(c for c in digits if c.isdigit()) or "1"
-                digits = digits[: max(1, len(src.lstrip("-")))].rjust(
-                    max(1, len(src.lstrip("-"))), "0"
-                )
-                cand = ("-" if src.startswith("-") else "") + digits
                 probe = 0
-                while self.values.has_value(cand):
+                while True:
+                    digits = "".join(ch for ch in token if ch.isdigit())
+                    if not digits:
+                        digits = self._digest("numid-fb", src, str(probe)).hex()
+                        digits = "".join(c for c in digits if c.isdigit()) or "1"
+                    w = max(1, len(src.lstrip("-")))
+                    if probe > 40:
+                        w += (probe // 40)
+                    if w == 1:
+                        d0 = digits[0]
+                        rest = ""
+                    else:
+                        d0 = digits[0] if digits[0] != "0" else str((int(digits[1] if len(digits) > 1 else "1") % 9) + 1)
+                        rest = digits[1:w].ljust(w - 1, "0")
+                    cand = ("-" if src.startswith("-") else "") + d0 + rest
+                    if not self.values.has_value(cand):
+                        existing = self.values.put(src, cand)
+                        break
                     probe += 1
-                    d2 = self._digest("numid", src, str(probe)).hex()
-                    d2 = "".join(c for c in d2 if c.isdigit()) or "1"
-                    d2 = d2[: max(1, len(src.lstrip("-")))].rjust(
-                        max(1, len(src.lstrip("-"))), "0"
-                    )
-                    cand = ("-" if src.startswith("-") else "") + d2
-                existing = self.values.put(src, cand)
+                    token = self._digest("numid", src, str(probe)).hex()
             try:
                 out.append(int(existing))
             except ValueError:
