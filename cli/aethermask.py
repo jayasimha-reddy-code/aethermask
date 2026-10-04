@@ -39,7 +39,7 @@ C_RESET, C_BOLD, C_GREEN, C_RED, C_CYAN, C_DIM = (
 
 def _pass(args) -> str:
     if getattr(args, "passphrase_file", None):
-        with open(args.passphrase_file, "r", encoding="utf-8") as fh:
+        with open(args.passphrase_file, encoding="utf-8") as fh:
             pw = fh.read().strip()
         if not pw:
             sys.exit("Passphrase file is empty.")

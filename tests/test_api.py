@@ -36,6 +36,7 @@ def check(name, cond, detail=""):
     else:
         FAILED.append(f"{name}: {detail}")
         print(f"  \033[91mFAIL\033[0m  {name}  {detail}")
+        assert cond, f"API check failed: {name} {detail}"
 
 
 def section(t):
@@ -320,3 +321,9 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+def test_api_suite() -> None:
+    """Pytest entry point for API integration checks."""
+    rc = main()
+    assert rc == 0, f"API suite failed with {len(FAILED)} failures: {FAILED}"

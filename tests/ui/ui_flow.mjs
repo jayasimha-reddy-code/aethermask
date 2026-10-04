@@ -1,8 +1,13 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const BASE = 'http://127.0.0.1:8000';
-const SHOTS = '/home/user/.probe/shots';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SAMPLES_DIR = path.resolve(__dirname, '../../samples');
+const BASE = process.env.AETHERMASK_URL || 'http://127.0.0.1:8000';
+const SHOTS = process.env.SHOTS || path.resolve(__dirname, 'screenshots');
 fs.mkdirSync(SHOTS, { recursive: true });
 
 const results = [];
@@ -53,7 +58,7 @@ if (lexVisible) {
      surrogates >= 100000, `surrogates=${surrogates}`);
 }
 
-await page.setInputFiles('input[type=file]', '/home/user/aethermask/samples/classified_missions.csv');
+await page.setInputFiles('input[type=file]', path.join(SAMPLES_DIR, 'classified_missions.csv'));
 await page.waitForTimeout(500);
 ok('file chip shows filename', await page.locator('text=classified_missions.csv').first().isVisible());
 await page.screenshot({ path: `${SHOTS}/v2-1-ingest.png`, fullPage: true });

@@ -26,17 +26,19 @@ is independent of dict iteration order.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Dict, List, Mapping, Sequence, Tuple
+
+from core import lexicon as _lexicon
 
 __all__ = [
-    "DomainProfile",
-    "DOMAIN_PROFILES",
-    "list_profiles",
-    "get_profile",
-    "SENSITIVITY_RULES",
-    "NER_PATTERNS",
     "CLASSIFICATION_TOKENS",
+    "DOMAIN_PROFILES",
+    "NER_PATTERNS",
+    "SENSITIVITY_RULES",
+    "DomainProfile",
+    "get_profile",
+    "list_profiles",
 ]
 
 
@@ -45,7 +47,7 @@ __all__ = [
 # --------------------------------------------------------------------------- #
 
 #: Kinetic defense  ->  civil freight / supply-chain logistics
-_SHIFT_DEFENSE_TO_LOGISTICS: Dict[str, str] = {
+_SHIFT_DEFENSE_TO_LOGISTICS: dict[str, str] = {
     # --- platforms & organisation -----------------------------------------
     "strike_squadron": "logistics_fleet",
     "strike_package": "delivery_batch",
@@ -216,7 +218,7 @@ _SHIFT_DEFENSE_TO_LOGISTICS: Dict[str, str] = {
 }
 
 #: Aerospace / military aviation  ->  commercial aviation
-_SHIFT_AEROSPACE_TO_CIVIL_AVIATION: Dict[str, str] = {
+_SHIFT_AEROSPACE_TO_CIVIL_AVIATION: dict[str, str] = {
     "fighter_squadron": "carrier_fleet",
     "fighter": "airframe",
     "bomber": "freighter",
@@ -275,7 +277,7 @@ _SHIFT_AEROSPACE_TO_CIVIL_AVIATION: Dict[str, str] = {
 }
 
 #: Cyber warfare / offensive cyber  ->  smart-grid telemetry & SCADA ops
-_SHIFT_CYBERWAR_TO_SMARTGRID: Dict[str, str] = {
+_SHIFT_CYBERWAR_TO_SMARTGRID: dict[str, str] = {
     "cyber_operation": "grid_operation",
     "offensive_cyber": "grid_maintenance",
     "attack_vector": "fault_vector",
@@ -327,7 +329,7 @@ _SHIFT_CYBERWAR_TO_SMARTGRID: Dict[str, str] = {
 }
 
 #: Nuclear / strategic forces  ->  civil energy utility operations
-_SHIFT_NUCLEAR_TO_CIVIL_ENERGY: Dict[str, str] = {
+_SHIFT_NUCLEAR_TO_CIVIL_ENERGY: dict[str, str] = {
     "warhead_count": "turbine_count",
     "warhead": "turbine_module",
     "yield_kt": "output_mw",
@@ -358,7 +360,7 @@ _SHIFT_NUCLEAR_TO_CIVIL_ENERGY: Dict[str, str] = {
 }
 
 #: Maritime / naval  ->  commercial shipping
-_SHIFT_NAVAL_TO_COMMERCIAL_SHIPPING: Dict[str, str] = {
+_SHIFT_NAVAL_TO_COMMERCIAL_SHIPPING: dict[str, str] = {
     "destroyer": "container_vessel",
     "frigate": "feeder_vessel",
     "corvette": "coastal_vessel",
@@ -384,7 +386,7 @@ _SHIFT_NAVAL_TO_COMMERCIAL_SHIPPING: Dict[str, str] = {
 }
 
 #: Generic PII  ->  neutral corporate directory (always merged into every profile)
-_SHIFT_PII_COMMON: Dict[str, str] = {
+_SHIFT_PII_COMMON: dict[str, str] = {
     "social_security_number": "member_reference",
     "ssn": "member_reference",
     "national_id": "member_reference",
@@ -435,7 +437,7 @@ _SHIFT_PII_COMMON: Dict[str, str] = {
 # Pools are intentionally large, realistic, non-classified and *disjoint per
 # semantic class* so that a masked dataset reads like a genuine civil dataset.
 
-_POOL_LOGISTICS_ORG: List[str] = [
+_POOL_LOGISTICS_ORG: list[str] = [
     "Northbridge Freight", "Cascade Haulage", "Meridian Cargo Lines", "Verdant Logistics",
     "Harborline Distribution", "Ironwood Transport", "Silverpine Freightways", "Brightpath Carriers",
     "Stonegate Supply", "Copperfield Shipping", "Larkspur Logistics", "Redwood Intermodal",
@@ -446,7 +448,7 @@ _POOL_LOGISTICS_ORG: List[str] = [
     "Foxglove Logistics", "Marbleton Freight", "Sable Creek Transport", "Windmere Cargo",
 ]
 
-_POOL_LOGISTICS_SITE: List[str] = [
+_POOL_LOGISTICS_SITE: list[str] = [
     "Ashford Depot", "Bellweather Hub", "Cedar Junction", "Dunmore Terminal", "Eastport Yard",
     "Fairhaven Depot", "Glenmoor Hub", "Hallbrook Terminal", "Inverness Yard", "Jarvis Crossing",
     "Kingsley Depot", "Lowfield Hub", "Marlow Terminal", "Netherton Yard", "Oakridge Crossing",
@@ -455,7 +457,7 @@ _POOL_LOGISTICS_SITE: List[str] = [
     "Alderman Depot", "Brackenridge Hub", "Coldharbour Terminal", "Draycott Yard", "Elmsworth Crossing",
 ]
 
-_POOL_LOGISTICS_ROUTE: List[str] = [
+_POOL_LOGISTICS_ROUTE: list[str] = [
     "Route Alderline", "Route Beacon", "Route Cobblestone", "Route Driftwood", "Route Elmgate",
     "Route Foxrun", "Route Goldleaf", "Route Hazelford", "Route Ivyway", "Route Junipark",
     "Route Kelpline", "Route Lanternway", "Route Milestone", "Route Northgale", "Route Orchard",
@@ -463,7 +465,7 @@ _POOL_LOGISTICS_ROUTE: List[str] = [
     "Route Umberfield", "Route Valeway", "Route Westford", "Route Yewbridge", "Route Zephyr",
 ]
 
-_POOL_LOGISTICS_ASSET: List[str] = [
+_POOL_LOGISTICS_ASSET: list[str] = [
     "Hauler-Alpine", "Hauler-Basalt", "Hauler-Cinder", "Hauler-Dovetail", "Hauler-Ember",
     "Hauler-Flint", "Hauler-Granite", "Hauler-Hearth", "Hauler-Ironbark", "Hauler-Jetstream",
     "Hauler-Kindling", "Hauler-Limestone", "Hauler-Marble", "Hauler-Nickel", "Hauler-Obsidian",
@@ -471,7 +473,7 @@ _POOL_LOGISTICS_ASSET: List[str] = [
     "Hauler-Umber", "Hauler-Vellum", "Hauler-Wicker", "Hauler-Xenolith", "Hauler-Yardarm", "Hauler-Zinc",
 ]
 
-_POOL_LOGISTICS_PROGRAMME: List[str] = [
+_POOL_LOGISTICS_PROGRAMME: list[str] = [
     "Programme Clearview", "Programme Driftline", "Programme Evenkeel", "Programme Foldout",
     "Programme Gatepost", "Programme Halyard", "Programme Ledger", "Programme Manifest",
     "Programme Nightshift", "Programme Overland", "Programme Palletwise", "Programme Quayside",
@@ -479,7 +481,7 @@ _POOL_LOGISTICS_PROGRAMME: List[str] = [
     "Programme Viaduct", "Programme Waybill", "Programme Yardstick", "Programme Zoning",
 ]
 
-_POOL_AVIATION_ORG: List[str] = [
+_POOL_AVIATION_ORG: list[str] = [
     "Aurora Air Cargo", "Beacon Airlines", "Crestwind Aviation", "Dawnstar Airways",
     "Eastwind Air", "Falconridge Airlines", "Goldenvale Air", "Highcloud Aviation",
     "Isleway Airlines", "Jetstream Regional", "Kitewing Air", "Lumen Airways",
@@ -487,7 +489,7 @@ _POOL_AVIATION_ORG: List[str] = [
     "Quicksilver Airways", "Ridgeline Air", "Skylark Airlines", "Trailwind Aviation",
 ]
 
-_POOL_AVIATION_SITE: List[str] = [
+_POOL_AVIATION_SITE: list[str] = [
     "Ashgrove Regional Airport", "Brightfield Airport", "Cliffside Airport", "Deepwater Airport",
     "Elmhurst Regional", "Fernvale Airport", "Glasshouse Airport", "Harrowgate Regional",
     "Inletview Airport", "Jamesport Airport", "Kirkwall Regional", "Longmeadow Airport",
@@ -495,7 +497,7 @@ _POOL_AVIATION_SITE: List[str] = [
     "Quinnbury Regional", "Rushmere Airport", "Stillwater Airport", "Thornbury Regional",
 ]
 
-_POOL_AVIATION_ASSET: List[str] = [
+_POOL_AVIATION_ASSET: list[str] = [
     "Airframe Arclight", "Airframe Bluefin", "Airframe Cirrus", "Airframe Daybreak",
     "Airframe Everest", "Airframe Fairwind", "Airframe Glider", "Airframe Horizon",
     "Airframe Ionosphere", "Airframe Jubilee", "Airframe Keystone", "Airframe Lattice",
@@ -504,14 +506,14 @@ _POOL_AVIATION_ASSET: List[str] = [
     "Airframe Updraft", "Airframe Vantage", "Airframe Windrose", "Airframe Zenith",
 ]
 
-_POOL_GRID_ORG: List[str] = [
+_POOL_GRID_ORG: list[str] = [
     "Northfield Power Cooperative", "Baywater Utilities", "Cedarline Energy", "Dunfield Grid Services",
     "Eastmoor Electric", "Fallbrook Energy", "Greenhollow Utilities", "Highvale Power",
     "Ironvale Grid", "Junction Power Authority", "Kernwood Energy", "Lakevale Electric",
     "Millstream Utilities", "Norvale Grid Co", "Overbrook Energy", "Pinehaven Power",
 ]
 
-_POOL_GRID_SITE: List[str] = [
+_POOL_GRID_SITE: list[str] = [
     "Substation Alderwood", "Substation Brookmill", "Substation Coalfield", "Substation Draper",
     "Substation Eastgate", "Substation Fenwick", "Substation Granby", "Substation Hollowell",
     "Substation Ironbridge", "Substation Jessup", "Substation Kelvin", "Substation Lindum",
@@ -519,40 +521,40 @@ _POOL_GRID_SITE: List[str] = [
     "Substation Quarrydale", "Substation Renshaw", "Substation Stanhope", "Substation Tilbury",
 ]
 
-_POOL_GRID_ASSET: List[str] = [
+_POOL_GRID_ASSET: list[str] = [
     "Feeder-A1", "Feeder-A2", "Feeder-B1", "Feeder-B2", "Feeder-C1", "Feeder-C2",
     "Transformer-TX01", "Transformer-TX02", "Transformer-TX03", "Transformer-TX04",
     "Recloser-RC11", "Recloser-RC12", "Recloser-RC13", "Capacitor-CB21", "Capacitor-CB22",
     "Regulator-VR31", "Regulator-VR32", "Inverter-INV41", "Inverter-INV42", "Meter-MTR51",
 ]
 
-_POOL_ENERGY_ORG: List[str] = [
+_POOL_ENERGY_ORG: list[str] = [
     "Ardenne Power Works", "Blackridge Generation", "Coldstream Energy Board", "Deanfield Power",
     "Ellerby Generation", "Fairlow Energy", "Grangewood Power", "Hartsmere Generation",
     "Inglewood Energy", "Kirkbourne Power", "Lyndale Generation", "Maybridge Energy",
 ]
 
-_POOL_ENERGY_SITE: List[str] = [
+_POOL_ENERGY_SITE: list[str] = [
     "Ravensworth Plant", "Sableford Plant", "Tamworth Plant", "Underhill Plant", "Vale End Plant",
     "Wrenbury Plant", "Yealand Plant", "Ashcombe Plant", "Barrowdale Plant", "Cranfield Plant",
     "Dorrington Plant", "Edgewater Plant", "Foxdale Plant", "Grimsby Point Plant",
 ]
 
-_POOL_SHIPPING_ORG: List[str] = [
+_POOL_SHIPPING_ORG: list[str] = [
     "Anchorline Shipping", "Bayreach Maritime", "Coralway Lines", "Deepharbour Maritime",
     "Ebbtide Shipping", "Fathomline Maritime", "Gulfstar Lines", "Headland Maritime",
     "Isobar Shipping", "Jetsam Lines", "Keelwater Maritime", "Longshore Lines",
     "Mooringside Shipping", "Netloft Maritime", "Offing Lines", "Portbow Maritime",
 ]
 
-_POOL_SHIPPING_SITE: List[str] = [
+_POOL_SHIPPING_SITE: list[str] = [
     "Port Ardmore", "Port Beltane", "Port Carrick", "Port Dunmara", "Port Elmsgate",
     "Port Fairlight", "Port Glenbay", "Port Havenrock", "Port Ilfracombe", "Port Jetland",
     "Port Kilnsea", "Port Lyndhaven", "Port Marnock", "Port Newquay", "Port Oysterbed",
     "Port Pellow", "Port Quayhead", "Port Ravensbay", "Port Saltmarsh", "Port Trevose",
 ]
 
-_POOL_SHIPPING_ASSET: List[str] = [
+_POOL_SHIPPING_ASSET: list[str] = [
     "MV Arbourfield", "MV Brentmoor", "MV Calderstone", "MV Dunholme", "MV Eskdale",
     "MV Fenhurst", "MV Garrowby", "MV Hollinwood", "MV Inglestone", "MV Jervaulx",
     "MV Kirkstall", "MV Laverton", "MV Marsdale", "MV Newlyn", "MV Oxhey",
@@ -560,7 +562,7 @@ _POOL_SHIPPING_ASSET: List[str] = [
 ]
 
 #: Neutral person surrogates (never real public figures) - used for PII / NER
-_POOL_PERSON: List[str] = [
+_POOL_PERSON: list[str] = [
     "A. Halloran", "B. Ingersoll", "C. Marchetti", "D. Fenwick", "E. Okonkwo", "F. Lindqvist",
     "G. Baptiste", "H. Sorensen", "I. Kavanagh", "J. Petrossian", "K. Ashworth", "L. Duvall",
     "M. Thorsen", "N. Calloway", "O. Rhodes", "P. Vasquez", "Q. Ellingham", "R. Nakamura",
@@ -572,7 +574,7 @@ _POOL_PERSON: List[str] = [
 ]
 
 #: Neutral geo-political place surrogates (fictional civil districts)
-_POOL_PLACE: List[str] = [
+_POOL_PLACE: list[str] = [
     "Ardenvale District", "Brackwater District", "Calderon District", "Dunmoor District",
     "Ellinsworth District", "Fairbourne District", "Greymouth District", "Halverton District",
     "Ironford District", "Jessamine District", "Kilbride District", "Lanmoor District",
@@ -581,14 +583,14 @@ _POOL_PLACE: List[str] = [
     "Uttoxbridge District", "Vearnham District", "Westhollow District", "Yarnbury District",
 ]
 
-_POOL_ORG_GENERIC: List[str] = [
+_POOL_ORG_GENERIC: list[str] = [
     "Alderpoint Holdings", "Brightmoor Group", "Cindercrest Industries", "Dovetail Partners",
     "Emberly Corporation", "Foxhollow Group", "Glimmerfield Industries", "Hartwell Holdings",
     "Ivorygate Partners", "Jackdaw Industries", "Kingfisher Group", "Lambourne Holdings",
     "Mosswood Partners", "Nettlefield Group", "Oriel Industries", "Pardoe Holdings",
 ]
 
-_POOL_PROJECT_GENERIC: List[str] = [
+_POOL_PROJECT_GENERIC: list[str] = [
     "Project Almanac", "Project Beltline", "Project Cornerstone", "Project Dovetail",
     "Project Evergreen", "Project Foundry", "Project Greenfield", "Project Hearthstone",
     "Project Ironclad", "Project Juniper", "Project Keystone", "Project Lighthouse",
@@ -598,18 +600,18 @@ _POOL_PROJECT_GENERIC: List[str] = [
 ]
 
 #: Handling tiers replacing classification markings (ordinal order preserved)
-_POOL_HANDLING_TIER: List[str] = [
+_POOL_HANDLING_TIER: list[str] = [
     "TIER-1 PUBLIC", "TIER-2 INTERNAL", "TIER-3 RESTRICTED", "TIER-4 CONTROLLED",
     "TIER-5 PRIVILEGED", "TIER-6 SEALED", "TIER-7 ESCROW", "TIER-8 ARCHIVE",
 ]
 
-_POOL_STATUS_GENERIC: List[str] = [
+_POOL_STATUS_GENERIC: list[str] = [
     "STATE-ALPHA", "STATE-BRAVO", "STATE-CHARLIE", "STATE-DELTA", "STATE-ECHO",
     "STATE-FOXTROT", "STATE-GOLF", "STATE-HOTEL", "STATE-INDIA", "STATE-JULIET",
     "STATE-KILO", "STATE-LIMA", "STATE-MIKE", "STATE-NOVEMBER", "STATE-OSCAR", "STATE-PAPA",
 ]
 
-_POOL_CATEGORY_GENERIC: List[str] = [
+_POOL_CATEGORY_GENERIC: list[str] = [
     "Category Ashen", "Category Bramble", "Category Cobalt", "Category Dunlin", "Category Elmwood",
     "Category Ferrite", "Category Gossamer", "Category Halcyon", "Category Indigo", "Category Jasper",
     "Category Kelvin", "Category Lichen", "Category Mulberry", "Category Nutmeg", "Category Onyx",
@@ -635,9 +637,9 @@ class DomainProfile:
     token_shifts: Mapping[str, str]
     pools: Mapping[str, Sequence[str]]
     #: Ordered rewrite keys (longest first) - precomputed for determinism.
-    _ordered_keys: Tuple[str, ...] = field(default=(), repr=False, compare=False)
+    _ordered_keys: tuple[str, ...] = field(default=(), repr=False, compare=False)
 
-    def ordered_shift_keys(self) -> Tuple[str, ...]:
+    def ordered_shift_keys(self) -> tuple[str, ...]:
         if self._ordered_keys:
             return self._ordered_keys
         keys = tuple(sorted(self.token_shifts.keys(), key=lambda k: (-len(k), k)))
@@ -649,14 +651,14 @@ class DomainProfile:
         return self.pools.get(semantic_class) or self.pools["GENERIC"]
 
 
-def _merge(*dicts: Mapping[str, str]) -> Dict[str, str]:
-    out: Dict[str, str] = {}
+def _merge(*dicts: Mapping[str, str]) -> dict[str, str]:
+    out: dict[str, str] = {}
     for d in dicts:
         out.update(d)
     return out
 
 
-_COMMON_POOLS: Dict[str, Sequence[str]] = {
+_COMMON_POOLS: dict[str, Sequence[str]] = {
     "PERSON": _POOL_PERSON,
     "PLACE": _POOL_PLACE,
     "PROJECT": _POOL_PROJECT_GENERIC,
@@ -665,7 +667,7 @@ _COMMON_POOLS: Dict[str, Sequence[str]] = {
     "GENERIC": _POOL_CATEGORY_GENERIC,
 }
 
-DOMAIN_PROFILES: Dict[str, DomainProfile] = {
+DOMAIN_PROFILES: dict[str, DomainProfile] = {
     "defense_to_logistics": DomainProfile(
         key="defense_to_logistics",
         title="Kinetic Defense → Civil Freight Logistics",
@@ -799,15 +801,14 @@ DOMAIN_PROFILES: Dict[str, DomainProfile] = {
 # while large datasets gain hundreds or thousands of extra natural-looking
 # surrogates instead of falling back to numeric suffixing.
 
-from core import lexicon as _lexicon  # noqa: E402  (deliberate late import)
 
 
 def _extend_pool(
     original: Sequence[str], expanded: Sequence[str]
-) -> Tuple[str, ...]:
+) -> tuple[str, ...]:
     """Append `expanded` to `original`, de-duplicating, order-stable."""
     seen: set = set()
-    out: List[str] = []
+    out: list[str] = []
     for item in list(original) + list(expanded):
         if item not in seen:
             seen.add(item)
@@ -822,7 +823,7 @@ def _apply_lexicon_expansion() -> None:
         profile = DOMAIN_PROFILES.get(profile_key)
         if profile is None:
             continue
-        widened: Dict[str, Sequence[str]] = dict(profile.pools)
+        widened: dict[str, Sequence[str]] = dict(profile.pools)
         for semantic_class, pool in extra_pools.items():
             widened[semantic_class] = _extend_pool(
                 widened.get(semantic_class, ()), pool
@@ -835,7 +836,7 @@ def _apply_lexicon_expansion() -> None:
         if key in DOMAIN_PROFILES:
             continue
         spec_pools: Mapping[str, Sequence[str]] = spec["pools"]  # type: ignore[assignment]
-        merged_pools: Dict[str, Sequence[str]] = {**_COMMON_POOLS}
+        merged_pools: dict[str, Sequence[str]] = {**_COMMON_POOLS}
         for semantic_class, pool in spec_pools.items():
             merged_pools[semantic_class] = _extend_pool(
                 merged_pools.get(semantic_class, ()), pool
@@ -857,16 +858,16 @@ def _apply_lexicon_expansion() -> None:
 _apply_lexicon_expansion()
 
 
-def profile_pool_sizes(key: str) -> Dict[str, int]:
+def profile_pool_sizes(key: str) -> dict[str, int]:
     """Return the surrogate pool size per semantic class for one profile."""
     profile = get_profile(key)
     return {name: len(vals) for name, vals in sorted(profile.pools.items())}
 
 
-def lexicon_report() -> Dict[str, object]:
+def lexicon_report() -> dict[str, object]:
     """Aggregate lexicon capacity, surfaced by /api/v1/attestation."""
     unique: set = set()
-    per_profile: Dict[str, Dict[str, int]] = {}
+    per_profile: dict[str, dict[str, int]] = {}
     for key, profile in DOMAIN_PROFILES.items():
         per_profile[key] = {n: len(v) for n, v in sorted(profile.pools.items())}
         for vals in profile.pools.values():
@@ -883,7 +884,7 @@ def lexicon_report() -> Dict[str, object]:
     }
 
 
-def list_profiles() -> List[Dict[str, str]]:
+def list_profiles() -> list[dict[str, str]]:
     """Return a JSON-serialisable catalogue of available domain profiles."""
     return [
         {
@@ -915,7 +916,7 @@ def get_profile(key: str) -> DomainProfile:
 # Regexes are compiled once by core.profiler; kept as raw strings here so the
 # ruleset can be exported and reviewed as data by an accreditor.
 
-SENSITIVITY_RULES: List[Dict[str, object]] = [
+SENSITIVITY_RULES: list[dict[str, object]] = [
     # --- classification & handling markings --------------------------------
     {
         "id": "CLASSIFICATION_MARKING",
@@ -1114,7 +1115,7 @@ SENSITIVITY_RULES: List[Dict[str, object]] = [
 ]
 
 #: Explicit gazetteer used by the profiler for exact-token classification hits.
-CLASSIFICATION_TOKENS: Tuple[str, ...] = (
+CLASSIFICATION_TOKENS: tuple[str, ...] = (
     "TOP SECRET", "TOPSECRET", "TS", "SECRET", "CONFIDENTIAL", "RESTRICTED", "UNCLASSIFIED",
     "NOFORN", "ORCON", "FOUO", "CUI", "SCI", "SAP", "NATO SECRET", "COSMIC TOP SECRET",
 )
@@ -1131,7 +1132,7 @@ CLASSIFICATION_TOKENS: Tuple[str, ...] = (
 # image, core.nlp will additionally use it; these rules remain the deterministic
 # backbone and always run first so output is reproducible with or without spaCy.
 
-NER_PATTERNS: List[Dict[str, object]] = [
+NER_PATTERNS: list[dict[str, object]] = [
     {
         "label": "PERSON",
         "priority": 30,
@@ -1233,7 +1234,7 @@ NER_PATTERNS: List[Dict[str, object]] = [
 ]
 
 #: Map NER labels onto surrogate pools.
-NER_LABEL_TO_POOL: Dict[str, str] = {
+NER_LABEL_TO_POOL: dict[str, str] = {
     "PERSON": "PERSON",
     "ORG": "ORG",
     "ASSET": "ASSET",
@@ -1271,7 +1272,7 @@ _append_lexicon_rules()
 
 
 #: Additional rule-based NER patterns unlocked by the expanded lexicon.
-_EXTRA_NER_PATTERNS: List[Dict[str, object]] = [
+_EXTRA_NER_PATTERNS: list[dict[str, object]] = [
     {
         "label": "IBAN",
         "priority": 34,

@@ -244,7 +244,7 @@ export function CommandPalette({
             >
               {results.length === 0 ? (
                 <p className="px-4 py-8 text-center text-xs text-slate-500">
-                  No command matches “{query}”.
+                  No command matches &quot;{query}&quot;.
                 </p>
               ) : (
                 grouped.map(({ group, items }) => (

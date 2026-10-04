@@ -21,8 +21,9 @@ which satisfies the "analyses schema without retaining data" contract of the
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 import polars as pl
 
@@ -30,10 +31,10 @@ from .ontology import SENSITIVITY_RULES
 
 __all__ = [
     "ColumnProfile",
-    "TableProfile",
     "DatasetProfile",
-    "SensitivityProfiler",
     "SemanticRole",
+    "SensitivityProfiler",
+    "TableProfile",
 ]
 
 
@@ -50,7 +51,7 @@ class _CompiledRule:
     regex: re.Pattern[str]
 
 
-_RULES: List[_CompiledRule] = [
+_RULES: list[_CompiledRule] = [
     _CompiledRule(
         id=str(r["id"]),
         severity=int(r["severity"]),  # type: ignore[arg-type]
@@ -109,13 +110,13 @@ class ColumnProfile:
     is_unique: bool
     is_nullable: bool
     semantic_role: str
-    sample_values: List[str] = field(default_factory=list)
-    findings: List[Dict[str, Any]] = field(default_factory=list)
+    sample_values: list[str] = field(default_factory=list)
+    findings: list[dict[str, Any]] = field(default_factory=list)
     max_severity: int = 0
-    numeric_stats: Optional[Dict[str, float]] = None
-    top_categories: List[Dict[str, Any]] = field(default_factory=list)
+    numeric_stats: dict[str, float] | None = None
+    top_categories: list[dict[str, Any]] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -123,18 +124,18 @@ class ColumnProfile:
 class TableProfile:
     name: str
     row_count: int
-    columns: List[ColumnProfile]
-    primary_key_candidates: List[str] = field(default_factory=list)
-    composite_key_candidates: List[List[str]] = field(default_factory=list)
+    columns: list[ColumnProfile]
+    primary_key_candidates: list[str] = field(default_factory=list)
+    composite_key_candidates: list[list[str]] = field(default_factory=list)
     schema_fingerprint: str = ""
 
-    def column(self, name: str) -> Optional[ColumnProfile]:
+    def column(self, name: str) -> ColumnProfile | None:
         for c in self.columns:
             if c.name == name:
                 return c
         return None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "row_count": self.row_count,
@@ -148,15 +149,15 @@ class TableProfile:
 @dataclass
 class DatasetProfile:
     dataset_name: str
-    tables: List[TableProfile]
-    foreign_keys: List[Dict[str, Any]] = field(default_factory=list)
+    tables: list[TableProfile]
+    foreign_keys: list[dict[str, Any]] = field(default_factory=list)
     dataset_fingerprint: str = ""
     risk_grade: str = "LOW"
     risk_score: float = 0.0
-    finding_summary: Dict[str, int] = field(default_factory=dict)
+    finding_summary: dict[str, int] = field(default_factory=dict)
     recommended_profile: str = "generic_pii_redaction"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "dataset_name": self.dataset_name,
             "tables": [t.to_dict() for t in self.tables],
@@ -222,7 +223,7 @@ class SensitivityProfiler:
 
         role = self._infer_role(name, s, dtype, distinct, non_null, ratio, sample_vals)
 
-        numeric_stats: Optional[Dict[str, float]] = None
+        numeric_stats: dict[str, float] | None = None
         if s.dtype.is_numeric() and non_null:
             try:
                 numeric_stats = {
@@ -235,7 +236,7 @@ class SensitivityProfiler:
             except Exception:
                 numeric_stats = None
 
-        top_categories: List[Dict[str, Any]] = []
+        top_categories: list[dict[str, Any]] = []
         if role in (SemanticRole.CATEGORICAL, SemanticRole.BOOLEAN) and non_null:
             try:
                 vc = (
@@ -319,13 +320,13 @@ class SensitivityProfiler:
             return SemanticRole.FREE_TEXT
         return SemanticRole.CATEGORICAL
 
-    def _scan(self, name: str, samples: Sequence[str]) -> List[Dict[str, Any]]:
-        findings: List[Dict[str, Any]] = []
+    def _scan(self, name: str, samples: Sequence[str]) -> list[dict[str, Any]]:
+        findings: list[dict[str, Any]] = []
         seen: set[str] = set()
 
         for rule in _RULES:
-            hits: List[str] = []
-            where: List[str] = []
+            hits: list[str] = []
+            where: list[str] = []
 
             if rule.target in ("name", "both") and (
                 rule.regex.search(name) or rule.regex.search(_tokenized(name))
@@ -394,7 +395,7 @@ class SensitivityProfiler:
     @staticmethod
     def _composite_keys(
         df: pl.DataFrame, cols: Sequence[ColumnProfile], max_pairs: int = 40
-    ) -> List[List[str]]:
+    ) -> list[list[str]]:
         """Search 2-column composite keys among medium-cardinality columns."""
         if df.height == 0:
             return []
@@ -406,7 +407,7 @@ class SensitivityProfiler:
             )
             and c.distinct_count > 1 and not c.is_nullable
         ][:12]
-        found: List[List[str]] = []
+        found: list[list[str]] = []
         tried = 0
         for i in range(len(cands)):
             for j in range(i + 1, len(cands)):
@@ -432,7 +433,7 @@ class SensitivityProfiler:
         tprofiles = [self.profile_table(df, name) for name, df in tables.items()]
         fks = self._detect_foreign_keys(tables, tprofiles)
 
-        summary: Dict[str, int] = {}
+        summary: dict[str, int] = {}
         weighted = 0.0
         total_cols = 0
         for tp in tprofiles:
@@ -485,20 +486,20 @@ class SensitivityProfiler:
     @staticmethod
     def _detect_foreign_keys(
         tables: Mapping[str, pl.DataFrame], profiles: Sequence[TableProfile]
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Inclusion-dependency detection: child.col ⊆ parent.pk (>= 95% coverage).
         Runs entirely in-memory on local CPU via Polars set semantics.
         """
         by_name = {p.name: p for p in profiles}
-        parents: List[Tuple[str, str]] = []
+        parents: list[tuple[str, str]] = []
         for p in profiles:
             for pk in p.primary_key_candidates:
                 col = p.column(pk)
                 if col and col.distinct_count > 1:
                     parents.append((p.name, pk))
 
-        fks: List[Dict[str, Any]] = []
+        fks: list[dict[str, Any]] = []
         for child_name, child_df in tables.items():
             cp = by_name[child_name]
             for ccol in cp.columns:

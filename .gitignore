@@ -1,10 +1,132 @@
+# =============================================================================
+# AetherMask - Production Git Ignore Configuration
+# =============================================================================
+
+# --- Bytecode & Language Caches ---
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Virtual Environments ---
 .venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# --- Testing & Quality Tools ---
 .pytest_cache/
-scratch/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+junit.xml
+
+# --- Node & Frontend Build Artifacts ---
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 frontend/dist/
+frontend/.vite/
+frontend/.vite-temp/
+*.tsbuildinfo
+
+# --- Browser & UI Test Artifacts ---
+tests/ui/screenshots/
+.playwright/
+test-results/
+playwright-report/
+
+# --- Operating System Ephemera ---
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# --- Modern IDEs & Editors ---
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+.cursor/
+
+# --- Secrets, Credentials & Local Config ---
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+!.env.example
+*.pem
+*.key
+*.cert
+*.pfx
+*.p12
+
+# --- Application Runtime & Transformation Artifacts ---
 vault_out/*
 !vault_out/.gitkeep
 workspace/*
@@ -12,4 +134,7 @@ workspace/*
 *.ciphermap
 *_sanitized.*
 *_restored.*
+
+# --- Local Scratch & Tooling Directories ---
+scratch/
 .desloppify/

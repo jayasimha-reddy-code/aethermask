@@ -1,9 +1,16 @@
 /* End-to-end exercise of the v2.1 audit stage: run a real masking pass, then
    feed original + artifact + vault back through /verify via the GUI. */
 import { chromium } from 'playwright';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const BASE = 'http://127.0.0.1:8000';
-const SHOTS = '/home/user/.probe/shots';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SAMPLES_DIR = path.resolve(__dirname, '../../samples');
+const BASE = process.env.AETHERMASK_URL || 'http://127.0.0.1:8000';
+const SHOTS = process.env.SHOTS || path.resolve(__dirname, 'screenshots');
+fs.mkdirSync(SHOTS, { recursive: true });
 const browser = await chromium.launch({ args: ['--no-sandbox'] });
 const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 } })).newPage();
 const external = [];
@@ -21,7 +28,7 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.waitForTimeout(800);
 
 // 1. produce a real masked artifact + vault
-await page.setInputFiles('input[type=file]', '/home/user/aethermask/samples/classified_missions.csv');
+await page.setInputFiles('input[type=file]', path.join(SAMPLES_DIR, 'classified_missions.csv'));
 await page.waitForTimeout(1200);
 await page.click('button:has-text("Analyse sensitivity")');
 await page.waitForSelector('text=/risk score/', { timeout: 60000 });

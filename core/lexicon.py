@@ -29,13 +29,13 @@ the standard library.
 
 from __future__ import annotations
 
-from typing import Dict, List, Mapping, Sequence, Tuple
+from collections.abc import Sequence
 
 __all__ = [
     "EXPANDED_POOLS",
-    "EXTRA_TOKEN_SHIFTS",
     "EXTRA_PROFILE_SPECS",
     "EXTRA_SENSITIVITY_RULES",
+    "EXTRA_TOKEN_SHIFTS",
     "pool_statistics",
 ]
 
@@ -43,7 +43,7 @@ __all__ = [
 # --------------------------------------------------------------------------- #
 #  Deterministic composition helper
 # --------------------------------------------------------------------------- #
-def _compose(*parts: Sequence[str], sep: str = " ") -> Tuple[str, ...]:
+def _compose(*parts: Sequence[str], sep: str = " ") -> tuple[str, ...]:
     """
     Deterministic cartesian product of stem lists.
 
@@ -51,10 +51,10 @@ def _compose(*parts: Sequence[str], sep: str = " ") -> Tuple[str, ...]:
     every host and every Python build, which is a hard requirement for
     reproducible `.ciphermap` files.
     """
-    out: List[str] = []
+    out: list[str] = []
     seen: set[str] = set()
 
-    def walk(idx: int, acc: List[str]) -> None:
+    def walk(idx: int, acc: list[str]) -> None:
         if idx == len(parts):
             s = sep.join(acc)
             if s not in seen:
@@ -70,10 +70,10 @@ def _compose(*parts: Sequence[str], sep: str = " ") -> Tuple[str, ...]:
     return tuple(sorted(out))
 
 
-def _merge_pools(*pools: Sequence[str]) -> Tuple[str, ...]:
+def _merge_pools(*pools: Sequence[str]) -> tuple[str, ...]:
     """Concatenate pools, de-duplicating while preserving deterministic order."""
     seen: set[str] = set()
-    out: List[str] = []
+    out: list[str] = []
     for pool in pools:
         for item in pool:
             if item not in seen:
@@ -85,7 +85,7 @@ def _merge_pools(*pools: Sequence[str]) -> Tuple[str, ...]:
 # --------------------------------------------------------------------------- #
 #  Shared geographic / descriptive stems (British + North American civil flavour)
 # --------------------------------------------------------------------------- #
-_STEM_PLACE_A: Tuple[str, ...] = (
+_STEM_PLACE_A: tuple[str, ...] = (
     "Alder", "Ash", "Aspen", "Bay", "Birch", "Black", "Bram", "Bridge", "Bright",
     "Brook", "Cedar", "Chester", "Clay", "Clear", "Cold", "Copper", "Corn",
     "Cross", "Dale", "Deer", "Dun", "East", "Elm", "Ember", "Fair", "Fall",
@@ -106,7 +106,7 @@ _STEM_PLACE_A: Tuple[str, ...] = (
     "Timber", "Tinder", "Verge", "Warren", "Weaver", "Whisper", "Winter",
 )
 
-_STEM_PLACE_B: Tuple[str, ...] = (
+_STEM_PLACE_B: tuple[str, ...] = (
     "bank", "bourne", "brook", "burn", "bury", "combe", "croft", "dale", "den",
     "field", "ford", "gate", "grove", "haven", "hill", "holm", "hurst", "ley",
     "mead", "mere", "moor", "mouth", "port", "ridge", "shaw", "side", "stead",
@@ -120,13 +120,13 @@ _STEM_PLACE_B: Tuple[str, ...] = (
 )
 
 #: ~3,200 realistic civil place names, deterministic.
-_PLACE_NAMES: Tuple[str, ...] = _compose(_STEM_PLACE_A, _STEM_PLACE_B, sep="")
+_PLACE_NAMES: tuple[str, ...] = _compose(_STEM_PLACE_A, _STEM_PLACE_B, sep="")
 
 
 # --------------------------------------------------------------------------- #
 #  ORGANISATION pools
 # --------------------------------------------------------------------------- #
-_ORG_QUALIFIER: Tuple[str, ...] = (
+_ORG_QUALIFIER: tuple[str, ...] = (
     "Allied", "Anchor", "Apex", "Atlas", "Beacon", "Cardinal", "Cascade",
     "Central", "Chartered", "Consolidated", "Continental", "Crescent",
     "Crown", "Delta", "Eastern", "Endeavour", "Everline", "Fidelity",
@@ -148,39 +148,39 @@ _ORG_QUALIFIER: Tuple[str, ...] = (
     "Whitfield", "Winslow", "Wycombe",
 )
 
-_ORG_LOGISTICS_SUFFIX: Tuple[str, ...] = (
+_ORG_LOGISTICS_SUFFIX: tuple[str, ...] = (
     "Freight", "Freightways", "Haulage", "Logistics", "Cargo Lines",
     "Distribution", "Transport", "Intermodal", "Supply Chain", "Carriers",
     "Forwarding", "Fulfilment", "Warehousing", "Courier Group",
 )
 
-_ORG_AVIATION_SUFFIX: Tuple[str, ...] = (
+_ORG_AVIATION_SUFFIX: tuple[str, ...] = (
     "Airlines", "Airways", "Air Cargo", "Aviation", "Air Services",
     "Air Freight", "Regional Air", "Air Transport", "Charter Air",
 )
 
-_ORG_GRID_SUFFIX: Tuple[str, ...] = (
+_ORG_GRID_SUFFIX: tuple[str, ...] = (
     "Power", "Energy", "Utilities", "Grid Services", "Electric",
     "Power Cooperative", "Energy Networks", "Distribution Networks",
 )
 
-_ORG_SHIPPING_SUFFIX: Tuple[str, ...] = (
+_ORG_SHIPPING_SUFFIX: tuple[str, ...] = (
     "Shipping", "Maritime", "Lines", "Marine Services", "Shipping Group",
     "Container Lines", "Marine Logistics", "Port Services",
 )
 
-_ORG_GENERIC_SUFFIX: Tuple[str, ...] = (
+_ORG_GENERIC_SUFFIX: tuple[str, ...] = (
     "Group", "Holdings", "Industries", "Partners", "Corporation", "Systems",
     "Technologies", "Solutions", "Enterprises", "Associates", "Ventures",
     "Consolidated", "Works", "Laboratories",
 )
 
-_ORG_AGRI_SUFFIX: Tuple[str, ...] = (
+_ORG_AGRI_SUFFIX: tuple[str, ...] = (
     "Agriculture", "Farms", "Agronomy", "Crop Sciences", "Growers",
     "Seed Company", "Harvest Group", "Nutrition", "Agri-Services",
 )
 
-_ORG_RETAIL_SUFFIX: Tuple[str, ...] = (
+_ORG_RETAIL_SUFFIX: tuple[str, ...] = (
     "Retail Group", "Stores", "Markets", "Trading", "Commerce",
     "Merchandising", "Outlets", "Consumer Brands", "Distribution Retail",
 )
@@ -197,32 +197,32 @@ POOL_ORG_RETAIL = _compose(_ORG_QUALIFIER, _ORG_RETAIL_SUFFIX)
 # --------------------------------------------------------------------------- #
 #  SITE pools
 # --------------------------------------------------------------------------- #
-_SITE_LOGISTICS_KIND: Tuple[str, ...] = (
+_SITE_LOGISTICS_KIND: tuple[str, ...] = (
     "Depot", "Hub", "Terminal", "Yard", "Crossing", "Distribution Centre",
     "Freight Park", "Transfer Station", "Cross-Dock", "Sorting Centre",
     "Warehouse", "Logistics Park",
 )
-_SITE_AVIATION_KIND: Tuple[str, ...] = (
+_SITE_AVIATION_KIND: tuple[str, ...] = (
     "Airport", "Regional Airport", "Airfield", "Air Terminal", "Cargo Terminal",
     "Aerodrome", "Flight Centre", "Maintenance Base",
 )
-_SITE_GRID_KIND: Tuple[str, ...] = (
+_SITE_GRID_KIND: tuple[str, ...] = (
     "Substation", "Switching Station", "Feeder Station", "Grid Node",
     "Distribution Point", "Transformer Yard", "Control Centre",
 )
-_SITE_ENERGY_KIND: Tuple[str, ...] = (
+_SITE_ENERGY_KIND: tuple[str, ...] = (
     "Plant", "Generating Station", "Power Station", "Energy Centre",
     "Turbine Hall", "Fuel Depot", "Cooling Facility",
 )
-_SITE_PORT_KIND: Tuple[str, ...] = (
+_SITE_PORT_KIND: tuple[str, ...] = (
     "Port", "Harbour", "Quay", "Wharf", "Container Terminal", "Dockyard",
     "Marine Terminal", "Berth Complex",
 )
-_SITE_AGRI_KIND: Tuple[str, ...] = (
+_SITE_AGRI_KIND: tuple[str, ...] = (
     "Farm", "Estate", "Grain Store", "Processing Plant", "Research Station",
     "Greenhouse Complex", "Trial Site", "Silo Park",
 )
-_SITE_RETAIL_KIND: Tuple[str, ...] = (
+_SITE_RETAIL_KIND: tuple[str, ...] = (
     "Store", "Retail Park", "Fulfilment Centre", "Showroom", "Outlet",
     "Regional Depot", "Service Point",
 )
@@ -245,11 +245,11 @@ POOL_PLACE = _compose(
 # --------------------------------------------------------------------------- #
 #  ROUTE pools
 # --------------------------------------------------------------------------- #
-_ROUTE_KIND: Tuple[str, ...] = (
+_ROUTE_KIND: tuple[str, ...] = (
     "Route", "Corridor", "Lane", "Service Route", "Trunk Route", "Link",
     "Circuit", "Loop", "Line",
 )
-_ROUTE_NAME: Tuple[str, ...] = (
+_ROUTE_NAME: tuple[str, ...] = (
     "Alderline", "Beacon", "Birchway", "Bramble", "Cobblestone", "Copperway",
     "Cornfield", "Crossgate", "Driftwood", "Eastgate", "Elmgate", "Fairway",
     "Fenland", "Flintway", "Foxrun", "Glenway", "Goldleaf", "Granitepath",
@@ -269,7 +269,7 @@ POOL_ROUTE = _compose(_ROUTE_KIND, _ROUTE_NAME)
 # --------------------------------------------------------------------------- #
 #  ASSET pools
 # --------------------------------------------------------------------------- #
-_MATERIAL_STEM: Tuple[str, ...] = (
+_MATERIAL_STEM: tuple[str, ...] = (
     "Alpine", "Amber", "Basalt", "Birchwood", "Bronze", "Cedar", "Cinder",
     "Cobalt", "Copper", "Coral", "Cypress", "Dovetail", "Driftwood", "Ember",
     "Flint", "Garnet", "Granite", "Gypsum", "Hearth", "Indigo", "Ironbark",
@@ -283,13 +283,13 @@ _MATERIAL_STEM: Tuple[str, ...] = (
 
 #: Trim/series designators give asset pools a second dimension so that
 #: high-cardinality fleet columns never exhaust the pool.
-_ASSET_SERIES: Tuple[str, ...] = (
+_ASSET_SERIES: tuple[str, ...] = (
     "Mk I", "Mk II", "Mk III", "Mk IV", "Mk V", "Mk VI",
     "Series 100", "Series 200", "Series 300", "Series 400", "Series 500",
     "LR", "SR", "XL", "HD", "Lite", "Pro", "Flex", "Max", "Eco",
 )
 
-_AIRFRAME_STEM: Tuple[str, ...] = (
+_AIRFRAME_STEM: tuple[str, ...] = (
     "Arclight", "Altostratus", "Beacon", "Bluefin", "Cirrus", "Contrail",
     "Daybreak", "Everest", "Fairwind", "Glider", "Horizon", "Ionosphere",
     "Jubilee", "Keystone", "Lattice", "Mariner", "Nimbus", "Northwind",
@@ -299,7 +299,7 @@ _AIRFRAME_STEM: Tuple[str, ...] = (
     "Highpass", "Jetsam", "Longhaul", "Meridian",
 )
 
-_HAULER_KIND: Tuple[str, ...] = (
+_HAULER_KIND: tuple[str, ...] = (
     "Hauler", "Tractor", "Trailer", "Vanline", "Boxliner", "Flatbed",
     "Reefer", "Tanker-Road", "Curtainer", "Skeletal",
 )
@@ -313,7 +313,7 @@ POOL_ASSET_VESSEL = _merge_pools(
 )
 #: Grid assets are enumerated per substation zone so the pool scales with
 #: real distribution-network cardinality (thousands of metered devices).
-_GRID_ZONE: Tuple[str, ...] = tuple(f"Z{n:02d}" for n in range(1, 25))
+_GRID_ZONE: tuple[str, ...] = tuple(f"Z{n:02d}" for n in range(1, 25))
 
 POOL_ASSET_GRID = _merge_pools(
     _compose(("Feeder",), _GRID_ZONE,
@@ -335,9 +335,9 @@ POOL_ASSET_GENERIC = _compose(
 # --------------------------------------------------------------------------- #
 #  PERSON pool (neutral surrogates, globally plausible, never real figures)
 # --------------------------------------------------------------------------- #
-_GIVEN_INITIAL: Tuple[str, ...] = tuple(f"{c}." for c in "ABCDEFGHIJKLMNOPRSTVWZ")
+_GIVEN_INITIAL: tuple[str, ...] = tuple(f"{c}." for c in "ABCDEFGHIJKLMNOPRSTVWZ")
 
-_FAMILY_NAME: Tuple[str, ...] = (
+_FAMILY_NAME: tuple[str, ...] = (
     "Achebe", "Aldridge", "Almeida", "Andersen", "Ashworth", "Baptiste",
     "Beaumont", "Belanger", "Bramley", "Brightwell", "Calloway", "Cardoso",
     "Castellano", "Chandra", "Corrigan", "Dalgaard", "Delacroix", "Duvall",
@@ -371,8 +371,8 @@ POOL_PERSON = _compose(_GIVEN_INITIAL, _FAMILY_NAME)
 # --------------------------------------------------------------------------- #
 #  PROJECT / PROGRAMME pools
 # --------------------------------------------------------------------------- #
-_PROJECT_KIND: Tuple[str, ...] = ("Project", "Programme", "Initiative", "Workstream")
-_PROJECT_NAME: Tuple[str, ...] = (
+_PROJECT_KIND: tuple[str, ...] = ("Project", "Programme", "Initiative", "Workstream")
+_PROJECT_NAME: tuple[str, ...] = (
     "Almanac", "Beltline", "Blueprint", "Cornerstone", "Clearview", "Compass",
     "Daybook", "Driftline", "Evenkeel", "Evergreen", "Foldout", "Foundry",
     "Gatepost", "Greenfield", "Halyard", "Hearthstone", "Inkwell", "Ironclad",
@@ -398,22 +398,22 @@ POOL_PROJECT = _compose(_PROJECT_KIND, _PROJECT_NAME)
 # --------------------------------------------------------------------------- #
 #  HANDLING TIER / STATUS / CATEGORY pools
 # --------------------------------------------------------------------------- #
-_TIER_LABEL: Tuple[str, ...] = (
+_TIER_LABEL: tuple[str, ...] = (
     "PUBLIC", "INTERNAL", "RESTRICTED", "CONTROLLED", "PRIVILEGED",
     "SEALED", "ESCROW", "ARCHIVE", "CUSTODIAL", "EMBARGOED",
     "REGULATED", "PROTECTED", "LIMITED", "RESERVED", "SUPERVISED",
     "ATTESTED", "WITNESSED", "NOTARISED", "QUARANTINED", "RETAINED",
 )
-_TIER_SCOPE: Tuple[str, ...] = (
+_TIER_SCOPE: tuple[str, ...] = (
     "", "/COMMERCIAL", "/PARTNER", "/AUDIT", "/RETENTION", "/EXPORT",
 )
-POOL_HANDLING_TIER: Tuple[str, ...] = tuple(
+POOL_HANDLING_TIER: tuple[str, ...] = tuple(
     f"TIER-{i} {label}{scope}"
     for scope in _TIER_SCOPE
     for i, label in enumerate(_TIER_LABEL, start=1)
 )
 
-_NATO_WORD: Tuple[str, ...] = (
+_NATO_WORD: tuple[str, ...] = (
     "ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT", "GOLF", "HOTEL",
     "INDIA", "JULIET", "KILO", "LIMA", "MIKE", "NOVEMBER", "OSCAR", "PAPA",
     "QUEBEC", "ROMEO", "SIERRA", "TANGO", "UNIFORM", "VICTOR", "WHISKEY",
@@ -426,7 +426,7 @@ POOL_STATUS = _compose(
     sep="-",
 )
 
-_COLOUR_WORD: Tuple[str, ...] = (
+_COLOUR_WORD: tuple[str, ...] = (
     "Ashen", "Amber", "Bramble", "Cobalt", "Copper", "Crimson", "Dunlin",
     "Elmwood", "Ferrite", "Gossamer", "Halcyon", "Indigo", "Jasper", "Kelvin",
     "Lichen", "Mulberry", "Nutmeg", "Ochre", "Onyx", "Pewter", "Quince",
@@ -470,12 +470,12 @@ POOL_ASSET_RETAIL = _compose(
 
 
 # --- pools for the space / earth-observation cover domain ------------------
-_ORG_EO_SUFFIX: Tuple[str, ...] = (
+_ORG_EO_SUFFIX: tuple[str, ...] = (
     "Earth Imaging", "Geospatial", "Earth Observation", "Imaging Services",
     "Remote Sensing", "Mapping Group", "Survey Systems", "Orbital Imaging",
     "Geo Analytics",
 )
-_SITE_EO_KIND: Tuple[str, ...] = (
+_SITE_EO_KIND: tuple[str, ...] = (
     "Ground Station", "Downlink Facility", "Operations Centre", "Antenna Park",
     "Processing Centre", "Archive Facility", "Calibration Site", "Teleport",
 )
@@ -489,12 +489,12 @@ POOL_ASSET_EO = _merge_pools(
 )
 
 # --- pools for the facilities-management cover domain ----------------------
-_ORG_FM_SUFFIX: Tuple[str, ...] = (
+_ORG_FM_SUFFIX: tuple[str, ...] = (
     "Facilities", "Estates", "Property Services", "Site Services",
     "Building Management", "Estate Management", "Maintenance Group",
     "Infrastructure Services",
 )
-_SITE_FM_KIND: Tuple[str, ...] = (
+_SITE_FM_KIND: tuple[str, ...] = (
     "Campus", "Facility", "Building", "Site", "Works", "Complex",
     "Service Centre", "Plant Room", "Annexe", "Compound",
 )
@@ -511,7 +511,7 @@ POOL_ASSET_FM = _merge_pools(
 #  EXPANDED POOL REGISTRY
 # --------------------------------------------------------------------------- #
 #: Per-cover-domain pool overrides merged into the ontology profiles.
-EXPANDED_POOLS: Dict[str, Dict[str, Tuple[str, ...]]] = {
+EXPANDED_POOLS: dict[str, dict[str, tuple[str, ...]]] = {
     "defense_to_logistics": {
         "ORG": POOL_ORG_LOGISTICS,
         "SITE": POOL_SITE_LOGISTICS,
@@ -592,7 +592,7 @@ EXPANDED_POOLS: Dict[str, Dict[str, Tuple[str, ...]]] = {
 # --------------------------------------------------------------------------- #
 
 #: Biomedical / CBRN defence  ->  commercial agriculture & crop science
-_SHIFT_BIODEFENCE_TO_AGRI: Dict[str, str] = {
+_SHIFT_BIODEFENCE_TO_AGRI: dict[str, str] = {
     "pathogen_strain": "cultivar_line",
     "pathogen": "cultivar",
     "biological_agent": "crop_input",
@@ -647,7 +647,7 @@ _SHIFT_BIODEFENCE_TO_AGRI: Dict[str, str] = {
 }
 
 #: Financial intelligence / sanctions  ->  retail commerce analytics
-_SHIFT_FININT_TO_RETAIL: Dict[str, str] = {
+_SHIFT_FININT_TO_RETAIL: dict[str, str] = {
     "sanctioned_entity": "restricted_supplier",
     "sanctions_list": "restricted_list",
     "sanction": "restriction",
@@ -700,7 +700,7 @@ _SHIFT_FININT_TO_RETAIL: Dict[str, str] = {
 
 
 #: Space / satellite reconnaissance  ->  commercial earth-observation services
-_SHIFT_SPACE_TO_EO: Dict[str, str] = {
+_SHIFT_SPACE_TO_EO: dict[str, str] = {
     "satellite_tasking": "acquisition_request",
     "tasking_order": "acquisition_order",
     "collection_deck": "capture_schedule",
@@ -744,7 +744,7 @@ _SHIFT_SPACE_TO_EO: Dict[str, str] = {
 }
 
 #: Critical national infrastructure protection  ->  facilities management
-_SHIFT_CNI_TO_FACILITIES: Dict[str, str] = {
+_SHIFT_CNI_TO_FACILITIES: dict[str, str] = {
     "critical_infrastructure": "priority_estate",
     "critical_national_infrastructure": "priority_estate",
     "vulnerability_assessment": "condition_survey",
@@ -786,7 +786,7 @@ _SHIFT_CNI_TO_FACILITIES: Dict[str, str] = {
     "maintenance_window": "maintenance_window",
 }
 
-EXTRA_TOKEN_SHIFTS: Dict[str, Dict[str, str]] = {
+EXTRA_TOKEN_SHIFTS: dict[str, dict[str, str]] = {
     "biodefence_to_agriculture": _SHIFT_BIODEFENCE_TO_AGRI,
     "finint_to_retail_analytics": _SHIFT_FININT_TO_RETAIL,
     "space_recon_to_earth_observation": _SHIFT_SPACE_TO_EO,
@@ -798,7 +798,7 @@ EXTRA_TOKEN_SHIFTS: Dict[str, Dict[str, str]] = {
 #  NEW DOMAIN PROFILE SPECIFICATIONS
 # --------------------------------------------------------------------------- #
 #: Consumed by core.ontology to register additional DomainProfile objects.
-EXTRA_PROFILE_SPECS: List[Dict[str, object]] = [
+EXTRA_PROFILE_SPECS: list[dict[str, object]] = [
     {
         "key": "biodefence_to_agriculture",
         "title": "Biodefence / CBRN → Commercial Agriculture",
@@ -904,7 +904,7 @@ EXTRA_PROFILE_SPECS: List[Dict[str, object]] = [
 # --------------------------------------------------------------------------- #
 #  ADDITIONAL SENSITIVITY RULES
 # --------------------------------------------------------------------------- #
-EXTRA_SENSITIVITY_RULES: List[Dict[str, object]] = [
+EXTRA_SENSITIVITY_RULES: list[dict[str, object]] = [
     {
         "id": "BIOLOGICAL_AGENT",
         "severity": 5,
@@ -1042,9 +1042,9 @@ EXTRA_SENSITIVITY_RULES: List[Dict[str, object]] = [
 # --------------------------------------------------------------------------- #
 #  Diagnostics
 # --------------------------------------------------------------------------- #
-def pool_statistics() -> Dict[str, object]:
+def pool_statistics() -> dict[str, object]:
     """Report pool sizes for the attestation / capability UI."""
-    per_domain: Dict[str, Dict[str, int]] = {}
+    per_domain: dict[str, dict[str, int]] = {}
     unique: set[str] = set()
     for domain, pools in EXPANDED_POOLS.items():
         per_domain[domain] = {name: len(vals) for name, vals in pools.items()}

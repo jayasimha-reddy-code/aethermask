@@ -36,24 +36,31 @@ import hashlib
 import hmac
 import re
 import string
-from dataclasses import dataclass, field, asdict
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Set, Tuple
+from collections.abc import Mapping, Sequence
+from dataclasses import asdict, dataclass, field
+from typing import Any
 
 import polars as pl
 
-from .nlp import Entity, OfflineNER, normalise_identifier, rejoin_identifier, split_identifier
+from .nlp import (
+    Entity,
+    OfflineNER,
+    normalise_identifier,
+    rejoin_identifier,
+    split_identifier,
+)
 from .ontology import DomainProfile, get_profile
 from .profiler import SemanticRole, SensitivityProfiler, TableProfile
 
 __all__ = [
-    "OfflineIsomorphicEngine",
-    "TransformConfig",
     "BijectiveMap",
-    "FidelityReport",
-    "FidelityError",
     "EngineError",
+    "FidelityError",
+    "FidelityReport",
     "MaskResult",
+    "OfflineIsomorphicEngine",
     "RestoreResult",
+    "TransformConfig",
 ]
 
 ENGINE_VERSION = "1.0"
@@ -91,19 +98,19 @@ class TransformConfig:
     #: Keep the physical format of identifiers (letter->letter, digit->digit)
     format_preserving_ids: bool = True
     #: Columns explicitly excluded from all transformation
-    passthrough_columns: List[str] = field(default_factory=list)
+    passthrough_columns: list[str] = field(default_factory=list)
     #: Columns forced through masking regardless of inferred role
-    force_mask_columns: List[str] = field(default_factory=list)
+    force_mask_columns: list[str] = field(default_factory=list)
     #: Deterministic run seed. Same seed => same surrogates.
     seed: str = "aethermask-default-seed"
     enable_statistical_ner: bool = True
     verify_fidelity: bool = True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @staticmethod
-    def from_dict(d: Mapping[str, Any]) -> "TransformConfig":
+    def from_dict(d: Mapping[str, Any]) -> TransformConfig:
         base = TransformConfig()
         for k, v in (d or {}).items():
             if hasattr(base, k) and v is not None:
@@ -131,9 +138,9 @@ class BijectiveMap:
 
     __slots__ = ("forward", "inverse")
 
-    def __init__(self, forward: Optional[Mapping[str, str]] = None) -> None:
-        self.forward: Dict[str, str] = {}
-        self.inverse: Dict[str, str] = {}
+    def __init__(self, forward: Mapping[str, str] | None = None) -> None:
+        self.forward: dict[str, str] = {}
+        self.inverse: dict[str, str] = {}
         if forward:
             for k, v in forward.items():
                 self.put(str(k), str(v))
@@ -157,13 +164,13 @@ class BijectiveMap:
         self.inverse[value] = key
         return value
 
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str | None:
         return self.forward.get(key)
 
     def has_value(self, value: str) -> bool:
         return value in self.inverse
 
-    def invert(self, value: str) -> Optional[str]:
+    def invert(self, value: str) -> str | None:
         return self.inverse.get(value)
 
     def __len__(self) -> int:
@@ -172,7 +179,7 @@ class BijectiveMap:
     def __contains__(self, key: object) -> bool:
         return key in self.forward
 
-    def as_dict(self) -> Dict[str, str]:
+    def as_dict(self) -> dict[str, str]:
         return dict(self.forward)
 
     def verify(self) -> None:
@@ -192,8 +199,8 @@ class BijectiveMap:
 @dataclass
 class FidelityReport:
     passed: bool = True
-    checks: List[Dict[str, Any]] = field(default_factory=list)
-    failures: List[str] = field(default_factory=list)
+    checks: list[dict[str, Any]] = field(default_factory=list)
+    failures: list[str] = field(default_factory=list)
 
     def add(self, name: str, table: str, column: str, ok: bool, detail: str = "") -> None:
         self.checks.append(
@@ -204,7 +211,7 @@ class FidelityReport:
             loc = f"{table}.{column}" if column else table
             self.failures.append(f"[{name}] {loc}: {detail}")
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         total = len(self.checks)
         ok = sum(1 for c in self.checks if c["ok"])
         return {
@@ -215,25 +222,25 @@ class FidelityReport:
             "failures": self.failures[:50],
         }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {**self.summary(), "checks": self.checks}
 
 
 @dataclass
 class MaskResult:
-    tables: Dict[str, pl.DataFrame]
-    mapping_payload: Dict[str, Any]
+    tables: dict[str, pl.DataFrame]
+    mapping_payload: dict[str, Any]
     fidelity: FidelityReport
-    table_name_map: Dict[str, str]
-    column_map: Dict[str, str]
+    table_name_map: dict[str, str]
+    column_map: dict[str, str]
     value_map_size: int
     schema_fingerprint: str
 
 
 @dataclass
 class RestoreResult:
-    tables: Dict[str, pl.DataFrame]
-    table_name_map: Dict[str, str]
+    tables: dict[str, pl.DataFrame]
+    table_name_map: dict[str, str]
     restored_columns: int
     restored_values: int
 
@@ -256,9 +263,9 @@ class OfflineIsomorphicEngine:
 
     def __init__(
         self,
-        config: Optional[TransformConfig] = None,
-        profiler: Optional[SensitivityProfiler] = None,
-        ner: Optional[OfflineNER] = None,
+        config: TransformConfig | None = None,
+        profiler: SensitivityProfiler | None = None,
+        ner: OfflineNER | None = None,
     ) -> None:
         self.config = config or TransformConfig()
         self.config.validate()
@@ -273,11 +280,11 @@ class OfflineIsomorphicEngine:
         self.values = BijectiveMap()
         self.table_names = BijectiveMap()
         #: column -> {"a": float, "b": float} for affine numeric projections
-        self.transform_params: Dict[str, Dict[str, Any]] = {}
+        self.transform_params: dict[str, dict[str, Any]] = {}
         #: per-column semantic bookkeeping recorded into the vault
-        self.column_meta: Dict[str, Dict[str, Any]] = {}
+        self.column_meta: dict[str, dict[str, Any]] = {}
         #: pool cursors, keyed by pool name, for deterministic allocation
-        self._pool_usage: Dict[str, Set[str]] = {}
+        self._pool_usage: dict[str, set[str]] = {}
 
     # ================================================================== #
     #  Deterministic primitives
@@ -343,7 +350,7 @@ class OfflineIsomorphicEngine:
             # Extend the stream if the token is longer than 32 bytes.
             while len(stream) < len(source):
                 stream += self._digest("fpt-ext", salt, source, str(len(stream)))
-            out: List[str] = []
+            out: list[str] = []
             for i, ch in enumerate(source):
                 b = stream[i]
                 if ch.isdigit():
@@ -391,7 +398,7 @@ class OfflineIsomorphicEngine:
 
         # 3. token-wise rewrite keeping original separators/casing
         tokens, seps = split_identifier(name)
-        new_tokens: List[str] = []
+        new_tokens: list[str] = []
         any_tok = False
         for tok in tokens:
             low = tok.lower()
@@ -431,7 +438,7 @@ class OfflineIsomorphicEngine:
             return replacement.capitalize()
         return replacement
 
-    def _allocate_column_name(self, name: str, taken: Set[str]) -> str:
+    def _allocate_column_name(self, name: str, taken: set[str]) -> str:
         """Shift a header, then deduplicate deterministically within the table."""
         existing = self.columns.get(name)
         if existing is not None and existing not in taken:
@@ -494,7 +501,7 @@ class OfflineIsomorphicEngine:
         # BEFORE the generic "name" token so that headers such as
         # "operation_name" or "installation_name" resolve on their domain noun
         # rather than on the trailing "_name" suffix.
-        rules: Sequence[Tuple[Tuple[str, ...], str]] = (
+        rules: Sequence[tuple[tuple[str, ...], str]] = (
             (("callsign", "call_sign", "tail_number", "hull_number", "registration"), "ASSET"),
             (("project", "program", "programme", "operation", "mission", "campaign",
               "exercise", "consignment", "task_force"), "PROJECT"),
@@ -530,8 +537,8 @@ class OfflineIsomorphicEngine:
     def mask(
         self,
         tables: Mapping[str, pl.DataFrame],
-        profiles: Optional[Mapping[str, TableProfile]] = None,
-        source_manifest: Optional[Mapping[str, Any]] = None,
+        profiles: Mapping[str, TableProfile] | None = None,
+        source_manifest: Mapping[str, Any] | None = None,
     ) -> MaskResult:
         """Transform every table into its isomorphic, non-classified image."""
         from .security import CipherVault
@@ -539,7 +546,7 @@ class OfflineIsomorphicEngine:
         if not tables:
             raise EngineError("No tables supplied to mask().")
 
-        profs: Dict[str, TableProfile] = dict(profiles) if profiles else {}
+        profs: dict[str, TableProfile] = dict(profiles) if profiles else {}
         for tname, df in tables.items():
             if tname not in profs:
                 profs[tname] = self.profiler.profile_table(df, tname)
@@ -549,12 +556,12 @@ class OfflineIsomorphicEngine:
         }
         schema_fp = CipherVault.multi_table_fingerprint(original_schema)
 
-        masked: Dict[str, pl.DataFrame] = {}
+        masked: dict[str, pl.DataFrame] = {}
         for tname, df in tables.items():
             masked[tname] = self._mask_table(tname, df, profs[tname])
 
         # Table names (recorded; applied at serialisation time)
-        tmap: Dict[str, str] = {}
+        tmap: dict[str, str] = {}
         for tname in tables:
             if self.config.mask_table_names:
                 shifted = self._shift_identifier(tname)
@@ -579,7 +586,7 @@ class OfflineIsomorphicEngine:
                     + "\n  ".join(fidelity.failures[:20])
                 )
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "engine_version": ENGINE_VERSION,
             "domain_profile": self.config.domain_profile,
             "config": self.config.to_dict(),
@@ -615,8 +622,8 @@ class OfflineIsomorphicEngine:
         if df.width == 0:
             return df.clone()
 
-        taken: Set[str] = set()
-        new_columns: List[pl.Series] = []
+        taken: set[str] = set()
+        new_columns: list[pl.Series] = []
 
         for col in prof.columns:
             name = col.name
@@ -632,7 +639,7 @@ class OfflineIsomorphicEngine:
             role = col.semantic_role
             pool = self._pool_for_column(name, role, col.findings)
 
-            meta: Dict[str, Any] = {
+            meta: dict[str, Any] = {
                 "table": tname,
                 "original_name": name,
                 "masked_name": new_name,
@@ -668,7 +675,7 @@ class OfflineIsomorphicEngine:
     # ------------------------------------------------------------------ #
     def _mask_numeric(
         self, series: pl.Series, name: str, role: str, qualified: str
-    ) -> Tuple[pl.Series, str]:
+    ) -> tuple[pl.Series, str]:
         cfg = self.config
 
         # Numeric identifiers are relabelled (as text-preserving integers) only
@@ -687,12 +694,14 @@ class OfflineIsomorphicEngine:
                     "kind": "affine", "a": a, "b": b, "dtype": str(series.dtype),
                 }
                 out = (series.cast(pl.Float64, strict=False) * a + b)
-                if series.dtype in (pl.Int8, pl.Int16, pl.Int32, pl.Int64,
-                                    pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64):
-                    # Preserve integrality only when the projection is integral.
-                    if float(a).is_integer() and float(b).is_integer():
-                        out = out.cast(series.dtype, strict=False)
-                        self.transform_params[qualified]["integral"] = True
+                if (
+                    series.dtype in (pl.Int8, pl.Int16, pl.Int32, pl.Int64,
+                                     pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)
+                    and float(a).is_integer()
+                    and float(b).is_integer()
+                ):
+                    out = out.cast(series.dtype, strict=False)
+                    self.transform_params[qualified]["integral"] = True
                 return out.rename(series.name), "affine"
 
         return series, "identity"
@@ -703,7 +712,7 @@ class OfflineIsomorphicEngine:
         preventing leading-zero integer collisions, so joins and downstream
         arithmetic on the key space continue to behave identically.
         """
-        out: List[Optional[int]] = []
+        out: list[int | None] = []
         for v in series.to_list():
             if v is None:
                 out.append(None)
@@ -747,7 +756,7 @@ class OfflineIsomorphicEngine:
     def _mask_stringlike(
         self, series: pl.Series, name: str, role: str, pool: str,
         col_profile, forced: bool,
-    ) -> Tuple[pl.Series, str]:
+    ) -> tuple[pl.Series, str]:
         cfg = self.config
         s = series.cast(pl.Utf8, strict=False)
 
@@ -775,7 +784,7 @@ class OfflineIsomorphicEngine:
         # Build the bijection over the DISTINCT domain only, then vectorise the
         # substitution. Frequencies are therefore preserved exactly.
         distinct = [v for v in s.unique(maintain_order=True).to_list() if v is not None]
-        local_map: Dict[str, str] = {}
+        local_map: dict[str, str] = {}
         for v in sorted(distinct):  # sorted => allocation order is deterministic
             local_map[v] = self._map_categorical(v, pool)
 
@@ -933,7 +942,7 @@ class OfflineIsomorphicEngine:
     def _series_close(cls, a: pl.Series, b: pl.Series, tol: float = 1e-6) -> bool:
         if a.len() != b.len():
             return False
-        for x, y in zip(a.to_list(), b.to_list()):
+        for x, y in zip(a.to_list(), b.to_list(), strict=False):
             if x is None and y is None:
                 continue
             if x is None or y is None:
@@ -964,12 +973,12 @@ class OfflineIsomorphicEngine:
         the default leaves unknown tokens untouched so that derived artifacts
         containing new computed columns still restore cleanly.
         """
-        col_fwd: Dict[str, str] = dict(mapping_payload.get("columns", {}))
-        val_fwd: Dict[str, str] = dict(mapping_payload.get("values", {}))
-        tbl_fwd: Dict[str, str] = dict(mapping_payload.get("table_names", {}))
-        params: Dict[str, Any] = dict(mapping_payload.get("transform_params", {}))
-        schema: Dict[str, Any] = dict(mapping_payload.get("schema", {}))
-        column_meta: Dict[str, Any] = dict(mapping_payload.get("column_meta", {}))
+        col_fwd: dict[str, str] = dict(mapping_payload.get("columns", {}))
+        val_fwd: dict[str, str] = dict(mapping_payload.get("values", {}))
+        tbl_fwd: dict[str, str] = dict(mapping_payload.get("table_names", {}))
+        params: dict[str, Any] = dict(mapping_payload.get("transform_params", {}))
+        schema: dict[str, Any] = dict(mapping_payload.get("schema", {}))
+        column_meta: dict[str, Any] = dict(mapping_payload.get("column_meta", {}))
 
         col_inv = {v: k for k, v in col_fwd.items()}
         val_inv = {v: k for k, v in val_fwd.items()}
@@ -982,7 +991,7 @@ class OfflineIsomorphicEngine:
         # strictly table-qualified lookup miss and silently skip the correct
         # inversion strategy. Keying on the masked column name makes restoration
         # independent of how the artifact was named or re-ingested.
-        meta_by_masked: Dict[str, Dict[str, Any]] = {}
+        meta_by_masked: dict[str, dict[str, Any]] = {}
         for _qkey, _meta in column_meta.items():
             if isinstance(_meta, dict):
                 mk = str(_meta.get("masked_name", ""))
@@ -996,8 +1005,8 @@ class OfflineIsomorphicEngine:
             )
 
         # masked table name -> original
-        restored: Dict[str, pl.DataFrame] = {}
-        name_map: Dict[str, str] = {}
+        restored: dict[str, pl.DataFrame] = {}
+        name_map: dict[str, str] = {}
         n_cols = 0
         n_vals = 0
 
@@ -1006,12 +1015,12 @@ class OfflineIsomorphicEngine:
             name_map[mname] = oname
 
             # dtype targets from the original schema, indexed by original name
-            target_types: Dict[str, str] = {}
+            target_types: dict[str, str] = {}
             for entry in schema.get(oname, []):
                 if isinstance(entry, (list, tuple)) and len(entry) == 2:
                     target_types[str(entry[0])] = str(entry[1])
 
-            out_series: List[pl.Series] = []
+            out_series: list[pl.Series] = []
             for mcol in mdf.columns:
                 ocol = col_inv.get(mcol, mcol)
                 if ocol != mcol:
@@ -1053,17 +1062,19 @@ class OfflineIsomorphicEngine:
                 # ANALYTICAL OUTPUT (a group-by with computed measures such as
                 # "total_sorties" that never existed in the source schema) to be
                 # re-identified without its numeric results being stringified.
-                if not (s.dtype == pl.Utf8 or s.dtype == pl.Categorical):
-                    if strategy != "numeric_identifier_bijection":
-                        out_series.append(cls._cast_to(s.rename(ocol), target))
-                        continue
+                if (
+                    s.dtype not in (pl.Utf8, pl.Categorical)
+                    and strategy != "numeric_identifier_bijection"
+                ):
+                    out_series.append(cls._cast_to(s.rename(ocol), target))
+                    continue
 
                 # Unknown/derived textual column with no vault provenance:
                 # invert only tokens the vault actually knows, never coerce.
                 # Token inversion path
                 txt = s.cast(pl.Utf8, strict=False)
                 distinct = [v for v in txt.unique(maintain_order=True).to_list() if v is not None]
-                local: Dict[str, str] = {}
+                local: dict[str, str] = {}
                 for v in distinct:
                     orig = val_inv.get(v)
                     if orig is None:
@@ -1116,7 +1127,7 @@ class OfflineIsomorphicEngine:
         return out
 
     @staticmethod
-    def _cast_to(s: pl.Series, dtype_str: Optional[str], integral: bool = False) -> pl.Series:
+    def _cast_to(s: pl.Series, dtype_str: str | None, integral: bool = False) -> pl.Series:
         """Best-effort restoration of the original physical dtype."""
         if not dtype_str:
             return s
@@ -1149,7 +1160,7 @@ class OfflineIsomorphicEngine:
     # ================================================================== #
     #  Diagnostics
     # ================================================================== #
-    def describe(self) -> Dict[str, Any]:
+    def describe(self) -> dict[str, Any]:
         return {
             "engine_version": ENGINE_VERSION,
             "domain_profile": self.profile.key,

@@ -1,0 +1,50 @@
+name: Feature Request
+description: Suggest an idea or enhancement for AetherMask
+title: "[Feat]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We welcome feature ideas and new cover domain proposals! Please provide technical context and describe how it maintains our air-gap and statistical isomorphism invariants.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement or Use Case
+      description: Is your feature request related to a specific workflow problem or mission scenario?
+      placeholder: "When transforming datasets with geospatial coordinates in format X..."
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Solution / Architecture
+      description: Describe the solution you'd like to see, including any CLI flags, API endpoints, or ontology pools needed.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative workarounds or designs?
+  - type: dropdown
+    id: component
+    attributes:
+      label: Target Component
+      options:
+        - Core Engine (`core.engine`)
+        - Domain Ontologies & Lexicons (`core.ontology` / `core.lexicon`)
+        - Cryptographic Vault (`core.security`)
+        - Ingestion / Serialisation (`core.ingest` / `core.serialize`)
+        - Data Studio Frontend SPA (`frontend`)
+        - CLI / API (`cli` / `api`)
+        - Docker & Deployment
+    validations:
+      required: true
+  - type: checkboxes
+    id: airgap-compliance
+    attributes:
+      label: Air-Gap Invariant Confirmation
+      options:
+        - label: This proposed feature can be executed 100% offline without remote network access or telemetry.
+          required: true

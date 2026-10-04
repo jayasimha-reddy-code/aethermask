@@ -3,10 +3,11 @@
   "private": true,
   "version": "2.1.0",
   "type": "module",
-  "description": "AetherMask (CipherShift) offline Data Studio - air-gapped SPA",
+  "description": "AetherMask offline Data Studio - air-gapped web interface",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
+    "test": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "build:fast": "vite build",
     "preview": "vite preview --host 0.0.0.0"

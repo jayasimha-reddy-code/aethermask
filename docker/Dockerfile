@@ -26,9 +26,9 @@ RUN pip wheel --wheel-dir=/wheels/dist -r requirements.txt
 # ---------- Stage 3: runtime (zero network) ------------------------------
 FROM python:3.12-slim-bookworm AS runtime
 
-LABEL org.opencontainers.image.title="AetherMask (CipherShift)" \
+LABEL org.opencontainers.image.title="AetherMask" \
       org.opencontainers.image.description="Air-gapped semantic obfuscation and lossless de-anonymization platform" \
-      org.opencontainers.image.version="1.0.0" \
+      org.opencontainers.image.version="2.1.0" \
       com.aethermask.airgap="enforced" \
       com.aethermask.egress="none"
 

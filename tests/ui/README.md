@@ -9,6 +9,7 @@ asserts 34 checks, including an independent observation that the SPA issues
 ```bash
 # 1. Start the server with the built SPA
 cd /path/to/aethermask
+export PYTHONPATH=$PWD
 AETHERMASK_STATIC_DIR=$PWD/frontend/dist \
   python3 -m uvicorn api.server:app --host 0.0.0.0 --port 8000
 
@@ -26,7 +27,7 @@ ALL 34 UI CHECKS PASSED
 External requests: 0
 ```
 
-Screenshots are written to `/home/user/.probe/shots/` (edit `SHOTS` to change).
+Screenshots are written to `tests/ui/screenshots/` by default (override with the `SHOTS` environment variable).
 
 ## What it asserts
 

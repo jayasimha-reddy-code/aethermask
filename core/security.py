@@ -32,6 +32,7 @@ All primitives come from `cryptography.hazmat` (OpenSSL) and `argon2-cffi`
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 import hmac
 import json
@@ -39,8 +40,9 @@ import os
 import secrets
 import time
 import zlib
-from dataclasses import dataclass, asdict
-from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
+from collections.abc import Mapping, Sequence
+from dataclasses import asdict, dataclass
+from typing import Any
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes
@@ -51,14 +53,17 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 # --- Argon2id backend selection (offline, no network) ----------------------- #
 _ARGON2_BACKEND: str
 try:  # preferred: argon2-cffi reference implementation
-    from argon2.low_level import Type as _Argon2Type, hash_secret_raw as _argon2_raw
+    from argon2.low_level import Type as _Argon2Type
+    from argon2.low_level import hash_secret_raw as _argon2_raw
 
     _ARGON2_BACKEND = "argon2-cffi"
 except Exception:  # pragma: no cover - exercised only on minimal images
     _argon2_raw = None  # type: ignore[assignment]
     _Argon2Type = None  # type: ignore[assignment]
     try:
-        from cryptography.hazmat.primitives.kdf.argon2 import Argon2id as _CryptoArgon2id
+        from cryptography.hazmat.primitives.kdf.argon2 import (
+            Argon2id as _CryptoArgon2id,
+        )
 
         _ARGON2_BACKEND = "cryptography-argon2id"
     except Exception:
@@ -67,14 +72,14 @@ except Exception:  # pragma: no cover - exercised only on minimal images
 
 
 __all__ = [
-    "CipherVault",
-    "VaultError",
-    "InvalidPassphrase",
-    "TamperedVault",
-    "SchemaMismatch",
-    "KdfParams",
     "CIPHER_SUITE",
     "MANIFEST_VERSION",
+    "CipherVault",
+    "InvalidPassphrase",
+    "KdfParams",
+    "SchemaMismatch",
+    "TamperedVault",
+    "VaultError",
 ]
 
 MANIFEST_VERSION = "1.0"
@@ -128,11 +133,11 @@ class KdfParams:
     parallelism: int = 2
     key_length: int = _KEY_BYTES
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @staticmethod
-    def from_dict(d: Mapping[str, Any]) -> "KdfParams":
+    def from_dict(d: Mapping[str, Any]) -> KdfParams:
         return KdfParams(
             algorithm=str(d.get("algorithm", "argon2id")),
             time_cost=int(d.get("time_cost", 4)),
@@ -177,7 +182,7 @@ class CipherVault:
     The class is stateless and thread-safe; instances carry only KDF policy.
     """
 
-    def __init__(self, kdf_params: Optional[KdfParams] = None) -> None:
+    def __init__(self, kdf_params: KdfParams | None = None) -> None:
         self.kdf_params = kdf_params or KdfParams()
         self.kdf_params.validate()
 
@@ -199,7 +204,7 @@ class CipherVault:
         return unicodedata.normalize("NFKC", passphrase).encode("utf-8")
 
     def derive_master_key(self, passphrase: str, salt: bytes,
-                          params: Optional[KdfParams] = None) -> bytes:
+                          params: KdfParams | None = None) -> bytes:
         """Derive the 32-byte master key with Argon2id (or validated fallback)."""
         p = params or self.kdf_params
         p.validate()
@@ -239,7 +244,7 @@ class CipherVault:
         return kdf3.derive(secret)
 
     @staticmethod
-    def _split_keys(master: bytes) -> Tuple[bytes, bytes]:
+    def _split_keys(master: bytes) -> tuple[bytes, bytes]:
         """HKDF-expand the master key into independent encryption and MAC keys."""
         enc = HKDF(algorithm=hashes.SHA256(), length=_KEY_BYTES,
                    salt=_HKDF_SALT, info=_HKDF_INFO_ENC).derive(master)
@@ -251,7 +256,7 @@ class CipherVault:
     #  Schema fingerprinting
     # ------------------------------------------------------------------ #
     @staticmethod
-    def schema_fingerprint(columns: Sequence[Tuple[str, str]],
+    def schema_fingerprint(columns: Sequence[tuple[str, str]],
                            table: str = "") -> str:
         """
         SHA-256 over the canonical `(column_name, dtype)` sequence.
@@ -272,7 +277,7 @@ class CipherVault:
         return h.hexdigest()
 
     @staticmethod
-    def multi_table_fingerprint(tables: Mapping[str, Sequence[Tuple[str, str]]]) -> str:
+    def multi_table_fingerprint(tables: Mapping[str, Sequence[tuple[str, str]]]) -> str:
         """Stable fingerprint across an entire relational dataset."""
         h = hashlib.sha256()
         h.update(b"aethermask-multischema-v1\x00")
@@ -313,8 +318,8 @@ class CipherVault:
         passphrase: str,
         schema_fingerprint: str,
         dataset_name: str = "dataset",
-        extra_header: Optional[Mapping[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        extra_header: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Encrypt the bijective mapping into a `.ciphermap` manifest dictionary.
 
@@ -340,7 +345,7 @@ class CipherVault:
         plaintext = self._canonical_json(mapping_payload)
         compressed = zlib.compress(plaintext, level=9)
 
-        header: Dict[str, Any] = {
+        header: dict[str, Any] = {
             "version": MANIFEST_VERSION,
             "cipher_suite": CIPHER_SUITE,
             "product": "AetherMask-CipherShift",
@@ -383,8 +388,8 @@ class CipherVault:
         self,
         manifest: Mapping[str, Any],
         passphrase: str,
-        expected_schema_fingerprint: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        expected_schema_fingerprint: str | None = None,
+    ) -> dict[str, Any]:
         """
         Decrypt and integrity-verify a `.ciphermap` manifest.
 
@@ -412,11 +417,10 @@ class CipherVault:
                 f"Unsupported cipher suite {manifest['cipher_suite']!r}"
             )
 
-        if expected_schema_fingerprint is not None:
-            if not hmac.compare_digest(
-                str(manifest["schema_fingerprint"]), str(expected_schema_fingerprint)
-            ):
-                raise SchemaMismatch(
+        if expected_schema_fingerprint is not None and not hmac.compare_digest(
+            str(manifest["schema_fingerprint"]), str(expected_schema_fingerprint)
+        ):
+            raise SchemaMismatch(
                     "Schema fingerprint mismatch: this .ciphermap does not belong "
                     "to the supplied dataset. Refusing to decrypt.\n"
                     f"  vault    : {manifest['schema_fingerprint']}\n"
@@ -500,16 +504,14 @@ class CipherVault:
         with open(tmp, "w", encoding="utf-8") as fh:
             fh.write(blob)
         os.replace(tmp, path)
-        try:
+        with contextlib.suppress(OSError):  # pragma: no cover - non-POSIX filesystems
             os.chmod(path, 0o600)
-        except OSError:  # pragma: no cover - non-POSIX filesystems
-            pass
         return path
 
     @staticmethod
-    def read_manifest(path: str) -> Dict[str, Any]:
+    def read_manifest(path: str) -> dict[str, Any]:
         """Load a `.ciphermap` manifest from disk."""
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = json.load(fh)
         if not isinstance(data, dict):
             raise TamperedVault("Manifest file does not contain a JSON object.")
@@ -519,7 +521,7 @@ class CipherVault:
     #  Diagnostics
     # ------------------------------------------------------------------ #
     @staticmethod
-    def backend_report() -> Dict[str, str]:
+    def backend_report() -> dict[str, str]:
         """Report the active crypto backends (for the air-gap attestation UI)."""
         import cryptography
 
@@ -534,7 +536,7 @@ class CipherVault:
         }
 
     @staticmethod
-    def passphrase_strength(passphrase: str) -> Dict[str, Any]:
+    def passphrase_strength(passphrase: str) -> dict[str, Any]:
         """
         Offline passphrase strength estimate (pool-size entropy model).
         Purely local; nothing is transmitted or logged.

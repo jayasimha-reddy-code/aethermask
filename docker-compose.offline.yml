@@ -13,7 +13,7 @@
 #
 #  Build (on a connected staging host, then export with `docker save`):
 #      docker compose -f docker-compose.offline.yml build
-#      docker save aethermask:1.0.0 | gzip > aethermask-1.0.0.tar.gz
+#      docker save aethermask:2.1.0 | gzip > aethermask-2.1.0.tar.gz
 #
 #  Run (on the air-gapped host, after `docker load`):
 #      docker compose -f docker-compose.offline.yml up -d aethermask
@@ -29,7 +29,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: runtime
-    image: aethermask:1.0.0
+    image: aethermask:2.1.0
     container_name: aethermask-airgapped
 
     # >>> The hard air-gap guarantee. <<<
@@ -105,7 +105,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: runtime
-    image: aethermask:1.0.0
+    image: aethermask:2.1.0
     container_name: aethermask-isolated
     restart: unless-stopped
     read_only: true

@@ -34,18 +34,19 @@ import json
 import os
 import re
 import socket
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any
 from urllib.parse import urlparse
 
 import polars as pl
 
 __all__ = [
-    "SourceManifest",
-    "IngestResult",
+    "SUPPORTED_EXTENSIONS",
     "DataIngestor",
     "IngestError",
-    "SUPPORTED_EXTENSIONS",
+    "IngestResult",
+    "SourceManifest",
 ]
 
 SUPPORTED_EXTENSIONS = (
@@ -68,21 +69,21 @@ class SourceManifest:
 
     source_kind: str                      # csv | excel | parquet | json | sql | postgres
     dataset_name: str
-    table_order: List[str] = field(default_factory=list)
+    table_order: list[str] = field(default_factory=list)
     csv_separator: str = ","
     csv_has_header: bool = True
-    excel_sheet_order: List[str] = field(default_factory=list)
+    excel_sheet_order: list[str] = field(default_factory=list)
     #: {sheet: {"A1": "=SUM(B1:B9)"}} - formulas captured verbatim
-    excel_formulas: Dict[str, Dict[str, str]] = field(default_factory=dict)
+    excel_formulas: dict[str, dict[str, str]] = field(default_factory=dict)
     #: {sheet: {"column": "header text"}} for non-dataframe header rows
     json_root_kind: str = "records"       # records | table_map
-    sql_ddl: Dict[str, str] = field(default_factory=dict)
-    sql_statement_order: List[str] = field(default_factory=list)
+    sql_ddl: dict[str, str] = field(default_factory=dict)
+    sql_statement_order: list[str] = field(default_factory=list)
     original_filename: str = ""
     encoding: str = "utf-8"
-    notes: List[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "source_kind": self.source_kind,
             "dataset_name": self.dataset_name,
@@ -100,7 +101,7 @@ class SourceManifest:
         }
 
     @staticmethod
-    def from_dict(d: Mapping[str, Any]) -> "SourceManifest":
+    def from_dict(d: Mapping[str, Any]) -> SourceManifest:
         m = SourceManifest(
             source_kind=str(d.get("source_kind", "csv")),
             dataset_name=str(d.get("dataset_name", "dataset")),
@@ -121,7 +122,7 @@ class SourceManifest:
 
 @dataclass
 class IngestResult:
-    tables: Dict[str, pl.DataFrame]
+    tables: dict[str, pl.DataFrame]
     manifest: SourceManifest
 
     @property
@@ -148,7 +149,7 @@ class DataIngestor:
     # ------------------------------------------------------------------ #
     #  Entry points
     # ------------------------------------------------------------------ #
-    def load_path(self, path: str, dataset_name: Optional[str] = None) -> IngestResult:
+    def load_path(self, path: str, dataset_name: str | None = None) -> IngestResult:
         if not os.path.isfile(path):
             raise IngestError(f"File not found: {path}")
         with open(path, "rb") as fh:
@@ -156,7 +157,7 @@ class DataIngestor:
         return self.load_bytes(data, os.path.basename(path), dataset_name)
 
     def load_bytes(
-        self, data: bytes, filename: str, dataset_name: Optional[str] = None
+        self, data: bytes, filename: str, dataset_name: str | None = None
     ) -> IngestResult:
         ext = os.path.splitext(filename)[1].lower()
         stem = dataset_name or os.path.splitext(os.path.basename(filename))[0] or "dataset"
@@ -215,7 +216,7 @@ class DataIngestor:
             except UnicodeDecodeError:
                 pass
 
-        text: Optional[str] = None
+        text: str | None = None
         for enc in ("utf-8-sig", "utf-8", "cp1252", "latin1", "iso-8859-1"):
             try:
                 text = data.decode(enc)
@@ -232,7 +233,7 @@ class DataIngestor:
     @staticmethod
     def _sniff_separator(data: bytes) -> str:
         head = data[:65536].decode("utf-8", errors="replace")
-        line = next((l for l in head.splitlines() if l.strip()), "")
+        line = next((ln for ln in head.splitlines() if ln.strip()), "")
         counts = {c: line.count(c) for c in [",", ";", "\t", "|"]}
         best = max(counts, key=lambda k: counts[k])
         return best if counts[best] > 0 else ","
@@ -273,8 +274,8 @@ class DataIngestor:
         if isinstance(parsed, dict) and parsed and all(
             isinstance(v, list) for v in parsed.values()
         ):
-            tables: Dict[str, pl.DataFrame] = {}
-            order: List[str] = []
+            tables: dict[str, pl.DataFrame] = {}
+            order: list[str] = []
             for tname, rows in parsed.items():
                 tables[tname] = pl.DataFrame(rows, infer_schema_length=None) if rows else pl.DataFrame()
                 order.append(tname)
@@ -299,9 +300,9 @@ class DataIngestor:
     def _load_excel(self, data: bytes, filename: str, stem: str) -> IngestResult:
         from openpyxl import load_workbook
 
-        tables: Dict[str, pl.DataFrame] = {}
-        sheet_order: List[str] = []
-        formulas: Dict[str, Dict[str, str]] = {}
+        tables: dict[str, pl.DataFrame] = {}
+        sheet_order: list[str] = []
+        formulas: dict[str, dict[str, str]] = {}
 
         try:
             # data_only=False keeps "=SUM(...)" strings intact.
@@ -322,10 +323,10 @@ class DataIngestor:
             ]
             header = self._dedupe(header)
 
-            body: List[List[Any]] = []
-            sheet_formulas: Dict[str, str] = {}
+            body: list[list[Any]] = []
+            sheet_formulas: dict[str, str] = {}
             for r in rows[1:]:
-                vals: List[Any] = []
+                vals: list[Any] = []
                 for c in r:
                     v = c.value
                     if isinstance(v, str) and v.startswith("="):
@@ -373,9 +374,9 @@ class DataIngestor:
         return out
 
     @staticmethod
-    def _dedupe(names: Sequence[str]) -> List[str]:
-        seen: Dict[str, int] = {}
-        out: List[str] = []
+    def _dedupe(names: Sequence[str]) -> list[str]:
+        seen: dict[str, int] = {}
+        out: list[str] = []
         for n in names:
             if n in seen:
                 seen[n] += 1
@@ -390,15 +391,15 @@ class DataIngestor:
     # ------------------------------------------------------------------ #
     def _load_sql_dump(self, data: bytes, filename: str, stem: str) -> IngestResult:
         text = data.decode("utf-8", errors="replace")
-        tables: Dict[str, pl.DataFrame] = {}
-        ddl: Dict[str, str] = {}
-        order: List[str] = []
+        tables: dict[str, pl.DataFrame] = {}
+        ddl: dict[str, str] = {}
+        order: list[str] = []
 
         schemas = self._parse_ddl(text, ddl)
         copy_rows = self._parse_copy_blocks(text)
         insert_rows = self._parse_inserts(text)
 
-        merged: Dict[str, Tuple[List[str], List[List[Any]]]] = {}
+        merged: dict[str, tuple[list[str], list[list[Any]]]] = {}
         for src in (copy_rows, insert_rows):
             for tname, (cols, rows) in src.items():
                 if tname in merged:
@@ -447,16 +448,16 @@ class DataIngestor:
         return IngestResult(tables, man)
 
     @staticmethod
-    def _parse_ddl(text: str, ddl_out: Dict[str, str]) -> Dict[str, List[str]]:
+    def _parse_ddl(text: str, ddl_out: dict[str, str]) -> dict[str, list[str]]:
         """Extract table -> column list using SQLGlot, with a regex fallback."""
-        schemas: Dict[str, List[str]] = {}
+        schemas: dict[str, list[str]] = {}
         stmt_re = re.compile(
             r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[^;]+;", re.IGNORECASE | re.DOTALL
         )
         for m in stmt_re.finditer(text):
             stmt = m.group(0)
-            name: Optional[str] = None
-            cols: List[str] = []
+            name: str | None = None
+            cols: list[str] = []
             try:
                 import sqlglot
                 from sqlglot import expressions as exp
@@ -498,9 +499,9 @@ class DataIngestor:
         return schemas
 
     @classmethod
-    def _parse_copy_blocks(cls, text: str) -> Dict[str, Tuple[List[str], List[List[Any]]]]:
+    def _parse_copy_blocks(cls, text: str) -> dict[str, tuple[list[str], list[list[Any]]]]:
         """Parse `COPY tbl (a,b) FROM stdin; ... \\.` blocks (pg_dump default)."""
-        out: Dict[str, Tuple[List[str], List[List[Any]]]] = {}
+        out: dict[str, tuple[list[str], list[list[Any]]]] = {}
         pattern = re.compile(
             r"COPY\s+(?:\"?[\w$]+\"?\.)?\"?(?P<tbl>[\w$]+)\"?\s*"
             r"(?:\((?P<cols>[^)]*)\))?\s*FROM\s+stdin[^;]*;\s*\n"
@@ -512,7 +513,7 @@ class DataIngestor:
             cols = [
                 c.strip().strip('"') for c in (m.group("cols") or "").split(",") if c.strip()
             ]
-            rows: List[List[Any]] = []
+            rows: list[list[Any]] = []
             for line in m.group("body").split("\n"):
                 if line == "" or line == "\\.":
                     continue
@@ -521,7 +522,7 @@ class DataIngestor:
         return out
 
     @staticmethod
-    def _pg_copy_value(raw: str) -> Optional[str]:
+    def _pg_copy_value(raw: str) -> str | None:
         if raw == "\\N":
             return None
         return (
@@ -530,9 +531,9 @@ class DataIngestor:
         )
 
     @classmethod
-    def _parse_inserts(cls, text: str) -> Dict[str, Tuple[List[str], List[List[Any]]]]:
+    def _parse_inserts(cls, text: str) -> dict[str, tuple[list[str], list[list[Any]]]]:
         """Parse `INSERT INTO tbl (cols) VALUES (...),(...);` statements."""
-        out: Dict[str, Tuple[List[str], List[List[Any]]]] = {}
+        out: dict[str, tuple[list[str], list[list[Any]]]] = {}
         pattern = re.compile(
             r"INSERT\s+INTO\s+(?:\"?[\w$]+\"?\.)?\"?(?P<tbl>[\w$]+)\"?\s*"
             r"(?:\((?P<cols>[^)]*)\))?\s*VALUES\s*(?P<vals>.*?);(?=\s*(?:$|\n))",
@@ -553,11 +554,11 @@ class DataIngestor:
         return out
 
     @staticmethod
-    def _split_value_tuples(blob: str) -> List[List[Any]]:
+    def _split_value_tuples(blob: str) -> list[list[Any]]:
         """SQL-aware tuple splitter honouring quotes, escapes and nesting."""
-        rows: List[List[Any]] = []
-        cur: List[Any] = []
-        buf: List[str] = []
+        rows: list[list[Any]] = []
+        cur: list[Any] = []
+        buf: list[str] = []
         in_str = False
         depth = 0
         i = 0
@@ -676,9 +677,9 @@ class DataIngestor:
         self,
         dsn: str,
         schema: str = "public",
-        tables: Optional[Sequence[str]] = None,
-        row_limit: Optional[int] = None,
-        dataset_name: Optional[str] = None,
+        tables: Sequence[str] | None = None,
+        row_limit: int | None = None,
+        dataset_name: str | None = None,
     ) -> IngestResult:
         """
         Read tables from a local PostgreSQL instance in a READ ONLY transaction.
@@ -696,9 +697,9 @@ class DataIngestor:
             ) from exc
 
         stem = dataset_name or (urlparse(dsn).path.lstrip("/") or "pgdataset")
-        out: Dict[str, pl.DataFrame] = {}
-        order: List[str] = []
-        ddl: Dict[str, str] = {}
+        out: dict[str, pl.DataFrame] = {}
+        order: list[str] = []
+        ddl: dict[str, str] = {}
 
         with psycopg.connect(dsn, autocommit=False) as conn:
             with conn.cursor() as cur:

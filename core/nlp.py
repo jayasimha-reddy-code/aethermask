@@ -31,18 +31,18 @@ from __future__ import annotations
 import os
 import re
 import threading
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 from .ontology import NER_LABEL_TO_POOL, NER_PATTERNS
 
 __all__ = [
     "Entity",
     "OfflineNER",
-    "tokenize",
     "normalise_identifier",
-    "split_identifier",
     "rejoin_identifier",
+    "split_identifier",
+    "tokenize",
 ]
 
 
@@ -54,7 +54,7 @@ _SEPARATORS = re.compile(r"[\s_\-./\\:|]+")
 _NON_WORD = re.compile(r"[^0-9A-Za-z]+")
 
 
-def split_identifier(name: str) -> Tuple[List[str], List[str]]:
+def split_identifier(name: str) -> tuple[list[str], list[str]]:
     """
     Split a column identifier into (tokens, separators) preserving the exact
     original delimiters so the name can be losslessly reassembled.
@@ -68,8 +68,8 @@ def split_identifier(name: str) -> Tuple[List[str], List[str]]:
         return [], []
 
     # First split on explicit separators, recording them.
-    parts: List[str] = []
-    seps: List[str] = []
+    parts: list[str] = []
+    seps: list[str] = []
     pos = 0
     last_end = 0
     for m in _SEPARATORS.finditer(name):
@@ -87,8 +87,8 @@ def split_identifier(name: str) -> Tuple[List[str], List[str]]:
         seps.append("")
 
     # Rebuild separators accurately via a second pass.
-    tokens: List[str] = []
-    separators: List[str] = []
+    tokens: list[str] = []
+    separators: list[str] = []
     idx = 0
     buf_sep = ""
     while idx < len(name):
@@ -116,7 +116,7 @@ def split_identifier(name: str) -> Tuple[List[str], List[str]]:
 
 def rejoin_identifier(tokens: Sequence[str], separators: Sequence[str]) -> str:
     """Inverse of :func:`split_identifier`."""
-    out: List[str] = []
+    out: list[str] = []
     for i, tok in enumerate(tokens):
         out.append(separators[i] if i < len(separators) else "")
         out.append(tok)
@@ -129,7 +129,7 @@ def normalise_identifier(name: str) -> str:
     return "_".join(t.lower() for t in tokens if t)
 
 
-def tokenize(text: str) -> List[str]:
+def tokenize(text: str) -> list[str]:
     """Deterministic whitespace/punctuation tokenizer (offline, no models)."""
     return [t for t in _NON_WORD.split(text) if t]
 
@@ -183,9 +183,9 @@ class OfflineNER:
     def __init__(
         self,
         enable_statistical: bool = True,
-        spacy_model_path: Optional[str] = None,
+        spacy_model_path: str | None = None,
     ) -> None:
-        self._compiled: List[Tuple[re.Pattern[str], str, int]] = []
+        self._compiled: list[tuple[re.Pattern[str], str, int]] = []
         for spec in NER_PATTERNS:
             self._compiled.append(
                 (
@@ -254,7 +254,7 @@ class OfflineNER:
     # ------------------------------------------------------------------ #
     #  Recognition
     # ------------------------------------------------------------------ #
-    def extract(self, text: str) -> List[Entity]:
+    def extract(self, text: str) -> list[Entity]:
         """
         Return non-overlapping entities sorted by start offset.
 
@@ -264,7 +264,7 @@ class OfflineNER:
         if not text or not isinstance(text, str):
             return []
 
-        candidates: List[Entity] = []
+        candidates: list[Entity] = []
         for pattern, label, priority in self._compiled:
             for m in pattern.finditer(text):
                 span = m.group(0)
@@ -300,12 +300,12 @@ class OfflineNER:
         return self._resolve_overlaps(candidates)
 
     @staticmethod
-    def _resolve_overlaps(cands: Iterable[Entity]) -> List[Entity]:
+    def _resolve_overlaps(cands: Iterable[Entity]) -> list[Entity]:
         ordered = sorted(
             cands, key=lambda e: (-e.priority, -(e.end - e.start), e.start, e.label)
         )
-        taken: List[Entity] = []
-        occupied: List[Tuple[int, int]] = []
+        taken: list[Entity] = []
+        occupied: list[tuple[int, int]] = []
         for ent in ordered:
             if any(ent.start < e and ent.end > s for s, e in occupied):
                 continue
@@ -316,7 +316,7 @@ class OfflineNER:
     # ------------------------------------------------------------------ #
     #  Rewriting
     # ------------------------------------------------------------------ #
-    def rewrite(self, text: str, resolver) -> Tuple[str, List[Entity]]:
+    def rewrite(self, text: str, resolver) -> tuple[str, list[Entity]]:
         """
         Replace every recognised entity using `resolver(entity) -> str`.
 
@@ -332,7 +332,7 @@ class OfflineNER:
             out = out[: ent.start] + replacement + out[ent.end:]
         return out, ents
 
-    def describe(self) -> Dict[str, object]:
+    def describe(self) -> dict[str, object]:
         """Diagnostics for the air-gap attestation panel."""
         return {
             "backend": self.backend,

@@ -13,31 +13,36 @@ Run:  python3 tests/test_full_suite.py
 """
 from __future__ import annotations
 
-import io
 import os
 import socket
 import sys
 import traceback
-from typing import Any, Dict, List
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import polars as pl
 
 from core.engine import (
-    BijectiveMap, EngineError, OfflineIsomorphicEngine, TransformConfig,
+    BijectiveMap,
+    EngineError,
+    OfflineIsomorphicEngine,
+    TransformConfig,
 )
 from core.ingest import DataIngestor
 from core.profiler import SensitivityProfiler
 from core.security import (
-    CipherVault, InvalidPassphrase, KDF_FAST, SchemaMismatch, TamperedVault,
+    KDF_FAST,
+    CipherVault,
+    InvalidPassphrase,
+    SchemaMismatch,
+    TamperedVault,
 )
 from core.serialize import ArtifactWriter
 
 SAMPLES = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "samples")
 
-_PASSED: List[str] = []
-_FAILED: List[str] = []
+_PASSED: list[str] = []
+_FAILED: list[str] = []
 
 
 def check(name: str, condition: bool, detail: str = "") -> None:
@@ -47,6 +52,7 @@ def check(name: str, condition: bool, detail: str = "") -> None:
     else:
         _FAILED.append(f"{name}: {detail}")
         print(f"  \033[91mFAIL\033[0m  {name}  {detail}")
+        assert condition, f"Check failed: {name} {detail}"
 
 
 def section(title: str) -> None:
@@ -214,7 +220,7 @@ def test_isomorphism(missions: pl.DataFrame) -> None:
     back3 = OfflineIsomorphicEngine.restore(r3.tables, r3.mapping_payload)
     rec = back3.tables["missions"].get_column("target_latitude")
     check("affine projection exactly invertible",
-          all(abs(float(a) - float(b)) < 1e-9 for a, b in zip(orig.to_list(), rec.to_list())))
+          all(abs(float(a) - float(b)) < 1e-9 for a, b in zip(orig.to_list(), rec.to_list(), strict=False)))
 
     # --- non-geo measures untouched under geo-only affine ------------------
     fb = r3.column_map.get("fuel_burn_kg", "fuel_burn_kg")
@@ -226,7 +232,7 @@ def test_isomorphism(missions: pl.DataFrame) -> None:
 # --------------------------------------------------------------------------- #
 #  G2b - Relational join topology across multiple tables
 # --------------------------------------------------------------------------- #
-def test_relational(tables: Dict[str, pl.DataFrame]) -> None:
+def test_relational(tables: dict[str, pl.DataFrame]) -> None:
     section("G2b RELATIONAL TOPOLOGY  (multi-table FK joins survive masking)")
     prof = SensitivityProfiler().profile_dataset(tables, "defense_db")
     fks = prof.foreign_keys
@@ -382,7 +388,7 @@ def test_vault(missions: pl.DataFrame) -> None:
 # --------------------------------------------------------------------------- #
 #  G5 - Lossless round-trip
 # --------------------------------------------------------------------------- #
-def test_roundtrip(tables: Dict[str, pl.DataFrame]) -> None:
+def test_roundtrip(tables: dict[str, pl.DataFrame]) -> None:
     section("G5  LOSSLESS BIDIRECTIONAL ROUND-TRIP")
     eng = OfflineIsomorphicEngine(TransformConfig(seed="rt-test"))
     res = eng.mask(tables)
@@ -438,7 +444,7 @@ def test_roundtrip(tables: Dict[str, pl.DataFrame]) -> None:
     o_notes = tables["missions"].get_column("mission_notes").to_list()
     r_notes = back.tables["missions"].get_column("mission_notes").to_list()
     check("free-text narrative restored verbatim", o_notes == r_notes,
-          next((f"{a!r} != {b!r}" for a, b in zip(o_notes, r_notes) if a != b), ""))
+          next((f"{a!r} != {b!r}" for a, b in zip(o_notes, r_notes, strict=False) if a != b), ""))
 
 
 # --------------------------------------------------------------------------- #

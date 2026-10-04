@@ -23,17 +23,18 @@ from __future__ import annotations
 import io
 import json
 import math
+from collections.abc import Mapping
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any
 
 import polars as pl
 
 from .ingest import SourceManifest
 
-__all__ = ["ArtifactWriter", "MIME_TYPES"]
+__all__ = ["MIME_TYPES", "ArtifactWriter"]
 
-MIME_TYPES: Dict[str, str] = {
+MIME_TYPES: dict[str, str] = {
     "csv": "text/csv",
     "tsv": "text/tab-separated-values",
     "excel": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -43,7 +44,7 @@ MIME_TYPES: Dict[str, str] = {
     "sql": "application/sql",
 }
 
-_EXTENSIONS: Dict[str, str] = {
+_EXTENSIONS: dict[str, str] = {
     "csv": ".csv", "tsv": ".tsv", "excel": ".xlsx",
     "parquet": ".parquet", "json": ".json", "ndjson": ".ndjson", "sql": ".sql",
 }
@@ -56,10 +57,10 @@ class ArtifactWriter:
         self,
         tables: Mapping[str, pl.DataFrame],
         manifest: SourceManifest,
-        fmt: Optional[str] = None,
-        stem: Optional[str] = None,
-        table_name_map: Optional[Mapping[str, str]] = None,
-    ) -> Tuple[bytes, str, str]:
+        fmt: str | None = None,
+        stem: str | None = None,
+        table_name_map: Mapping[str, str] | None = None,
+    ) -> tuple[bytes, str, str]:
         kind = (fmt or manifest.source_kind or "csv").lower()
         if kind in ("postgres",):
             kind = "sql"
@@ -87,7 +88,7 @@ class ArtifactWriter:
     @staticmethod
     def _ordered(
         tables: Mapping[str, pl.DataFrame], manifest: SourceManifest
-    ) -> List[Tuple[str, pl.DataFrame]]:
+    ) -> list[tuple[str, pl.DataFrame]]:
         order = [t for t in manifest.table_order if t in tables]
         order += [t for t in tables if t not in order]
         return [(t, tables[t]) for t in order]
@@ -98,7 +99,7 @@ class ArtifactWriter:
     def _csv(
         self, tables: Mapping[str, pl.DataFrame], manifest: SourceManifest,
         name: str, sep: str,
-    ) -> Tuple[bytes, str, str]:
+    ) -> tuple[bytes, str, str]:
         items = self._ordered(tables, manifest)
         if len(items) == 1:
             buf = io.BytesIO()
@@ -121,8 +122,8 @@ class ArtifactWriter:
     # ------------------------------------------------------------------ #
     def _excel(
         self, tables: Mapping[str, pl.DataFrame], manifest: SourceManifest,
-        name: str, table_name_map: Optional[Mapping[str, str]],
-    ) -> Tuple[bytes, str, str]:
+        name: str, table_name_map: Mapping[str, str] | None,
+    ) -> tuple[bytes, str, str]:
         from openpyxl import Workbook
         from openpyxl.styles import Alignment, Font, PatternFill
         from openpyxl.utils import get_column_letter
@@ -196,7 +197,7 @@ class ArtifactWriter:
     # ------------------------------------------------------------------ #
     def _parquet(
         self, tables: Mapping[str, pl.DataFrame], manifest: SourceManifest, name: str
-    ) -> Tuple[bytes, str, str]:
+    ) -> tuple[bytes, str, str]:
         items = self._ordered(tables, manifest)
         if len(items) == 1:
             buf = io.BytesIO()
@@ -218,11 +219,11 @@ class ArtifactWriter:
     # ------------------------------------------------------------------ #
     def _json(
         self, tables: Mapping[str, pl.DataFrame], manifest: SourceManifest,
-        name: str, table_name_map: Optional[Mapping[str, str]],
-    ) -> Tuple[bytes, str, str]:
+        name: str, table_name_map: Mapping[str, str] | None,
+    ) -> tuple[bytes, str, str]:
         items = self._ordered(tables, manifest)
         if manifest.json_root_kind == "table_map" or len(items) > 1:
-            payload: Dict[str, Any] = {}
+            payload: dict[str, Any] = {}
             for tname, df in items:
                 out_name = (table_name_map or {}).get(tname, tname)
                 payload[out_name] = df.to_dicts()
@@ -235,7 +236,7 @@ class ArtifactWriter:
 
     def _ndjson(
         self, tables: Mapping[str, pl.DataFrame], manifest: SourceManifest, name: str
-    ) -> Tuple[bytes, str, str]:
+    ) -> tuple[bytes, str, str]:
         items = self._ordered(tables, manifest)
         lines = [
             json.dumps(rec, ensure_ascii=False, default=self._json_default)
@@ -258,9 +259,9 @@ class ArtifactWriter:
     # ------------------------------------------------------------------ #
     def _sql(
         self, tables: Mapping[str, pl.DataFrame], manifest: SourceManifest,
-        name: str, table_name_map: Optional[Mapping[str, str]],
-    ) -> Tuple[bytes, str, str]:
-        parts: List[str] = [
+        name: str, table_name_map: Mapping[str, str] | None,
+    ) -> tuple[bytes, str, str]:
+        parts: list[str] = [
             "-- AetherMask (CipherShift) generated SQL artifact",
             "-- Air-gapped export. No external references.",
             "BEGIN;",
@@ -306,9 +307,9 @@ class ArtifactWriter:
     @classmethod
     def _inserts(cls, table: str, df: pl.DataFrame, chunk: int = 500) -> str:
         collist = ", ".join(f'"{c}"' for c in df.columns)
-        out: List[str] = []
+        out: list[str] = []
         rows = df.iter_rows()
-        batch: List[str] = []
+        batch: list[str] = []
         for row in rows:
             batch.append("(" + ", ".join(cls._sql_literal(v) for v in row) + ")")
             if len(batch) >= chunk:

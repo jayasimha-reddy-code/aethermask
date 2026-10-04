@@ -28,7 +28,6 @@ Hard offline guarantees enforced here
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 import os
@@ -36,25 +35,38 @@ import socket
 import sys
 import time
 import uuid
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import polars as pl
-from fastapi import Body, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from core.engine import (
-    EngineError, FidelityError, OfflineIsomorphicEngine, TransformConfig,
+    EngineError,
+    FidelityError,
+    OfflineIsomorphicEngine,
+    TransformConfig,
 )
-from core.ingest import DataIngestor, IngestError, SourceManifest, SUPPORTED_EXTENSIONS
-from core.ontology import DOMAIN_PROFILES, list_profiles, lexicon_report, profile_pool_sizes
+from core.ingest import SUPPORTED_EXTENSIONS, DataIngestor, IngestError, SourceManifest
+from core.ontology import (
+    DOMAIN_PROFILES,
+    lexicon_report,
+    list_profiles,
+    profile_pool_sizes,
+)
 from core.profiler import SensitivityProfiler
 from core.security import (
-    CipherVault, InvalidPassphrase, KdfParams, SchemaMismatch, TamperedVault, VaultError,
+    CipherVault,
+    InvalidPassphrase,
+    KdfParams,
+    SchemaMismatch,
+    TamperedVault,
+    VaultError,
 )
 from core.serialize import ArtifactWriter
 
@@ -67,15 +79,32 @@ logging.basicConfig(
 )
 log = logging.getLogger("aethermask")
 
-MAX_UPLOAD_BYTES = int(os.environ.get("AETHERMASK_MAX_UPLOAD_MB", "2048")) * 1024 * 1024
+def _env_int(key: str, default: int) -> int:
+    val = os.environ.get(key)
+    if val is None or val.strip() == "":
+        return default
+    try:
+        return int(val.strip())
+    except ValueError as exc:
+        raise ValueError(f"Invalid integer environment variable {key}={val!r}: {exc}") from exc
+
+
+def _env_bool(key: str, default: bool) -> bool:
+    val = os.environ.get(key)
+    if val is None or val.strip() == "":
+        return default
+    return val.strip().lower() in ("1", "true", "yes", "on")
+
+
+MAX_UPLOAD_BYTES = _env_int("AETHERMASK_MAX_UPLOAD_MB", 2048) * 1024 * 1024
 PREVIEW_ROWS = 60
 
 # --------------------------------------------------------------------------- #
 #  Egress sentinel - records (and by default blocks) outbound connections
 # --------------------------------------------------------------------------- #
-_EGRESS_EVENTS: List[Dict[str, Any]] = []
-_BLOCK_EGRESS = os.environ.get("AETHERMASK_BLOCK_EGRESS", "1") == "1"
-_ALLOW_LOCAL_PG = os.environ.get("AETHERMASK_ALLOW_LOCAL_PG", "1") == "1"
+_EGRESS_EVENTS: list[dict[str, Any]] = []
+_BLOCK_EGRESS = _env_bool("AETHERMASK_BLOCK_EGRESS", True)
+_ALLOW_LOCAL_PG = _env_bool("AETHERMASK_ALLOW_LOCAL_PG", True)
 
 
 def _install_egress_sentinel() -> None:
@@ -152,7 +181,7 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def security_headers(request: Request, call_next):
+async def security_headers(request: Request, call_next: Any) -> Response:
     """
     Attach a strict, self-only Content-Security-Policy.
 
@@ -200,9 +229,9 @@ _redacting_profiler = SensitivityProfiler(redact_values=True)
 
 def _kdf_params() -> KdfParams:
     """Allow low-memory appliances to dial Argon2 down via env."""
-    mem = int(os.environ.get("AETHERMASK_ARGON2_MEMORY_KIB", "262144"))
-    t = int(os.environ.get("AETHERMASK_ARGON2_TIME", "4"))
-    p = int(os.environ.get("AETHERMASK_ARGON2_PARALLELISM", "2"))
+    mem = _env_int("AETHERMASK_ARGON2_MEMORY_KIB", 262144)
+    t = _env_int("AETHERMASK_ARGON2_TIME", 4)
+    p = _env_int("AETHERMASK_ARGON2_PARALLELISM", 2)
     return KdfParams(time_cost=t, memory_cost_kib=mem, parallelism=p)
 
 
@@ -226,7 +255,8 @@ async def _read_upload(f: UploadFile) -> bytes:
 
 def _json_safe(v: Any) -> Any:
     import math
-    from datetime import date, datetime, time as dtime
+    from datetime import date, datetime
+    from datetime import time as dtime
     from decimal import Decimal
 
     if v is None:
@@ -242,7 +272,7 @@ def _json_safe(v: Any) -> Any:
     return str(v)
 
 
-def _frame_preview(df: pl.DataFrame, rows: int = PREVIEW_ROWS) -> Dict[str, Any]:
+def _frame_preview(df: pl.DataFrame, rows: int = PREVIEW_ROWS) -> dict[str, Any]:
     head = df.head(rows)
     return {
         "columns": list(df.columns),
@@ -254,7 +284,7 @@ def _frame_preview(df: pl.DataFrame, rows: int = PREVIEW_ROWS) -> Dict[str, Any]
 
 
 def _chart_series(df: pl.DataFrame, cat_col: str, val_col: str,
-                  limit: int = 14) -> List[Dict[str, Any]]:
+                  limit: int = 14) -> list[dict[str, Any]]:
     """Aggregate a (category, measure) pair into a Recharts-ready series."""
     try:
         agg = (
@@ -275,7 +305,7 @@ def _chart_series(df: pl.DataFrame, cat_col: str, val_col: str,
         return []
 
 
-def _pick_chart_columns(df: pl.DataFrame, prof) -> Optional[Dict[str, str]]:
+def _pick_chart_columns(df: pl.DataFrame, prof) -> dict[str, str] | None:
     """Choose a low-cardinality category and a numeric measure for the demo chart."""
     cat = None
     val = None
@@ -311,8 +341,8 @@ class HealthResponse(BaseModel):
 
 class RestoreJsonRequest(BaseModel):
     passphrase: str = Field(..., min_length=8)
-    ciphermap: Dict[str, Any]
-    tables: Dict[str, List[Dict[str, Any]]]
+    ciphermap: dict[str, Any]
+    tables: dict[str, list[dict[str, Any]]]
     strict: bool = False
 
 
@@ -330,7 +360,7 @@ async def health() -> HealthResponse:
 
 
 @app.get("/api/v1/profiles")
-async def profiles() -> Dict[str, Any]:
+async def profiles() -> dict[str, Any]:
     """
     Catalogue of offline domain-shift profiles.
 
@@ -353,7 +383,7 @@ async def profiles() -> Dict[str, Any]:
 
 
 @app.get("/api/v1/attestation")
-async def attestation() -> Dict[str, Any]:
+async def attestation() -> dict[str, Any]:
     from core.nlp import OfflineNER
 
     return {
@@ -384,8 +414,8 @@ async def attestation() -> Dict[str, Any]:
 @app.post("/api/v1/profile")
 async def profile_dataset(
     file: UploadFile = File(...),
-    dataset_name: Optional[str] = Form(None),
-) -> Dict[str, Any]:
+    dataset_name: str | None = Form(None),
+) -> dict[str, Any]:
     """
     Analyse schema, relational topology and sensitivity.
 
@@ -415,7 +445,7 @@ async def obfuscate(
     file: UploadFile = File(...),
     passphrase: str = Form(..., min_length=8),
     domain_profile: str = Form("defense_to_logistics"),
-    output_format: Optional[str] = Form(None),
+    output_format: str | None = Form(None),
     numeric_mode: str = Form("identity"),
     affine_scale: float = Form(1.0),
     affine_offset: float = Form(0.0),
@@ -425,11 +455,11 @@ async def obfuscate(
     mask_identifiers: bool = Form(True),
     mask_free_text: bool = Form(True),
     mask_table_names: bool = Form(True),
-    seed: Optional[str] = Form(None),
-    dataset_name: Optional[str] = Form(None),
-    passthrough_columns: Optional[str] = Form(None),
+    seed: str | None = Form(None),
+    dataset_name: str | None = Form(None),
+    passthrough_columns: str | None = Form(None),
     include_preview: bool = Form(True),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Ingest a confidential file and return:
       * the sanitized artifact (base64, original physical format by default)
@@ -510,7 +540,7 @@ async def obfuscate(
     except VaultError as exc:
         raise HTTPException(400, f"Vault sealing failed: {exc}") from exc
 
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "status": "obfuscated",
         "dataset_name": res.manifest.dataset_name,
         "domain_profile": domain_profile,
@@ -548,7 +578,7 @@ async def obfuscate(
         odf, mdf = res.tables[first], mres.tables[first]
         prof = profiles_map[first]
         chart_cols = _pick_chart_columns(odf, prof)
-        preview: Dict[str, Any] = {
+        preview: dict[str, Any] = {
             "table": first,
             "masked_table": mres.table_name_map.get(first, first),
             "original": _frame_preview(odf),
@@ -585,11 +615,11 @@ async def restore(
     file: UploadFile = File(...),
     ciphermap: UploadFile = File(...),
     passphrase: str = Form(..., min_length=8),
-    output_format: Optional[str] = Form(None),
+    output_format: str | None = Form(None),
     strict: bool = Form(False),
     verify_artifact_digest: bool = Form(False),
     include_preview: bool = Form(True),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Re-identify a sanitized artifact (or a downstream analytical output).
 
@@ -654,7 +684,7 @@ async def restore(
     except Exception as exc:
         raise HTTPException(500, f"Serialisation failed: {exc}") from exc
 
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "status": "restored",
         "artifact": {
             "filename": fname,
@@ -697,9 +727,9 @@ async def preview(
     file: UploadFile = File(...),
     domain_profile: str = Form("defense_to_logistics"),
     numeric_mode: str = Form("identity"),
-    seed: Optional[str] = Form(None),
+    seed: str | None = Form(None),
     rows: int = Form(PREVIEW_ROWS),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Dry-run transformation for the split-screen Data Studio.
 
@@ -734,7 +764,7 @@ async def preview(
 
     mdf = mres.tables[first]
     chart_cols = _pick_chart_columns(odf, prof)
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "table": first,
         "domain_profile": domain_profile,
         "profile_title": DOMAIN_PROFILES[domain_profile].title,
@@ -775,7 +805,7 @@ async def verify(
     sanitized: UploadFile = File(...),
     ciphermap: UploadFile = File(...),
     passphrase: str = Form(..., min_length=8),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Independent isomorphism audit of an (original, sanitized, vault) triple.
 
@@ -797,8 +827,8 @@ async def verify(
     o_res = _ingestor.load_bytes(o_raw, original.filename or "original")
     s_res = _ingestor.load_bytes(s_raw, sanitized.filename or "sanitized")
 
-    col_map: Dict[str, str] = dict(payload.get("columns", {}))
-    checks: List[Dict[str, Any]] = []
+    col_map: dict[str, str] = dict(payload.get("columns", {}))
+    checks: list[dict[str, Any]] = []
 
     o_first = next(iter(o_res.tables))
     s_first = next(iter(s_res.tables))
@@ -886,7 +916,7 @@ def main() -> None:  # pragma: no cover
     import uvicorn
 
     host = os.environ.get("AETHERMASK_HOST", "127.0.0.1")
-    port = int(os.environ.get("AETHERMASK_PORT", "8000"))
+    port = _env_int("AETHERMASK_PORT", 8000)
     log.info("AetherMask starting on %s:%s (air-gap enforced)", host, port)
     uvicorn.run(app, host=host, port=port, log_level="info", access_log=True)
 
